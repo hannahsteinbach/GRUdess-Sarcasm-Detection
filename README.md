@@ -1,6 +1,6 @@
 # witchcraft wortjongleurinnen
 
-
+This repository is used to share and save our code for the final ANLP project on sarcasm detection. Every one of the witches is welcome to share their ideas 💗🧙🏼‍♀️
 
 ## Getting started
 
