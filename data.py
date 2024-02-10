@@ -40,7 +40,7 @@ def load_dataset(filename: str):
             tweet_dict = dict()
             tweet_dict["tweetID"] =row[0]
             tweet_dict["tweetText"] = row[1]
-            tweet_dict["class"] = row[int(2)]
+            tweet_dict["class"] = int(row[2])
             
             if tweet_dict["class"] == 1:
                 tweet_dict["rephrase"] =row[3]
