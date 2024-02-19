@@ -2,7 +2,7 @@ import csv
 #from nltk.tokenize import word_tokenize
 from somajo import SoMaJo
 from someweta import ASPTagger
-import re 
+import re
 import emoji
 
 DATA_PATH = './data/train.SemEval.csv'
@@ -10,7 +10,7 @@ DATA_PATH = './data/train.SemEval.csv'
 def load_dataset(filename: str):
     """
     Function that reads the dataset and saves information about a
-    tweet within a dictionary. 
+    tweet within a dictionary.
     It contains: ID, Tweet, Classification, Rephrasing.
 
     Input:
@@ -23,7 +23,7 @@ def load_dataset(filename: str):
                             tweetID
                             tweetText
                             class
-                            rephrase
+                          The rephrases are handeled as individual tweets.
 
 
     """
@@ -34,53 +34,83 @@ def load_dataset(filename: str):
         data = csv.reader(f, delimiter=",")
 
         # this just skips the first line
-        next(data)  
+        next(data)
 
         for row in data:
             tweet_dict = dict()
-            tweet_dict["tweetID"] =row[0]
+            tweet_dict["tweetID"] = row[0]
             tweet_dict["tweetText"] = row[1]
             tweet_dict["class"] = int(row[2])
-            
-            if tweet_dict["class"] == 1:
-                tweet_dict["rephrase"] =row[3]
-            else: 
-                tweet_dict["rephrase"] = None
 
             dataset.append(tweet_dict)
 
+            if tweet_dict["class"] == 1: 
+                #rephrases get their own dictionary entry
+                #same ID as original tweets, we still know what the rephrase/OG tweet is bc of class
+                rephrase_dict = dict()
+                rephrase_dict["tweetID"] = row[0]
+                rephrase_dict["tweetText"] = row[3]
+                rephrase_dict["class"] = 0
+                dataset.append(rephrase_dict)
+
     return dataset
 
-def tokenizer   (dataset: list):
+
+def tokenizer(dataset: list):
     """
-    Function that tokenizes the text in a given dataset. 
+    Function that tokenizes the text in a given dataset.
     And additionally adds Part Of Speech Tags for each token.
 
     Input:
     1. dataset (list)   : A list which contains a dictionary.
                             Dictionary key "tweetText" contains the
                             text which is supposed to be tokenized.
-    
+
     Output:
     1. dataset (list)   : The same dataset (list) that was given as input
                             but the key "tweetTokenized" has been added
                             which holds the tokenized sentence.
     """
-    # create object for tokenizer 
+    # create object for tokenizer
     tokenizer = SoMaJo("en_PTB", split_sentences=False)
 
     # go through the dataset
     for tweet in dataset:
-        # take the text element from the dict 
-        to_tokenize = [tweet["tweetText"]] # must be list for tokenizer 
-        # tokenize the sentence
+        # take the text element from the dict
+        to_tokenize = [tweet["TweetwithoutEmoji"]]  # must be list for tokenizer
+        # tokenize the sentence (without emojis)
         tokenized_obj = tokenizer.tokenize_text(to_tokenize)
         for paragraph in tokenized_obj:
             tokenized_tweet = [token.text for token in paragraph]
-
         # create a new dict-element with the tokenized text
         tweet["tweetTokenized"] = tokenized_tweet
+    return dataset
 
+
+def cleanURLS(dataset: list):
+    url_pattern = re.compile(r'https?://\S+|www\.\S+')
+    # go through the dataset
+    for tweet in dataset:
+        # take the text element from the dict
+        tweet_toclean = tweet["tweetText"] # must be list for tokenizer
+        # remove URLs from text
+        no_URL = url_pattern.sub('', tweet_toclean)
+        # create a new dict-element with the clean text
+        tweet["tweetwithoutURL"] = no_URL
+    return dataset
+
+def handling_emojis(dataset: list):
+    for tweet in dataset:
+        #remove emojis of a tweet
+        tweet_without_emoji = emoji.replace_emoji(tweet["tweetwithoutURL"], replace='')
+
+        #three different entries:
+        #1) tweet without emojis, only text
+        tweet["TweetwithoutEmoji"] = tweet_without_emoji
+        #2) tweet with text AND description of emoji (e.g. "sad face")
+        tweet["TweetwithEmojidescription"] = emoji.demojize(tweet["tweetwithoutURL"])
+        #3) list of all emojis in tweet (again, description of the emoji)
+        tweet["Emojis"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetwithoutURL"])]
     return dataset
 
 
@@ -100,7 +130,7 @@ def pos_tagging(dataset):
     # go through dataset to get tokenized text
     for tweet in dataset:
         tokenized_tweet = [tweet[tokenized_tweet]]
-        
+
         # take the sentence & pos tag it
         for sentence in tokenized_tweet:
             tagged_sentence = asptagger.tag_sentence(sentence)
@@ -111,12 +141,13 @@ def pos_tagging(dataset):
 
     return dataset
 
-def cleanURLS(dataset: list):
-    pass
 
 dataset = load_dataset(DATA_PATH)
-#dataset = load_dataset("train.En.csv")
+dataset = cleanURLS(dataset)
+dataset = handling_emojis(dataset)
 dataset = tokenizer(dataset)
+
+print(dataset)
 
 """ - don't delete yet, still needed script in there 
 def load_dataset(filename: str):
