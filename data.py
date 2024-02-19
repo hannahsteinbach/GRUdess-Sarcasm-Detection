@@ -92,12 +92,13 @@ def cleanURLS(dataset: list):
     # go through the dataset
     for tweet in dataset:
         # take the text element from the dict
-        tweet_toclean = tweet["tweetText"] # must be list for tokenizer
+        tweet_toclean = tweet["tweetText"]
         # remove URLs from text
         no_URL = url_pattern.sub('', tweet_toclean)
         # create a new dict-element with the clean text
         tweet["tweetwithoutURL"] = no_URL
     return dataset
+
 
 def handling_emojis(dataset: list):
     for tweet in dataset:
