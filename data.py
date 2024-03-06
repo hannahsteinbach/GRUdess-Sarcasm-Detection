@@ -104,15 +104,22 @@ def handling_emojis(dataset: list):
     for tweet in dataset:
         #remove emojis of a tweet
         tweet_without_emoji = emoji.replace_emoji(tweet["tweetwithoutURL"], replace='')
-
         #three different entries:
         #1) tweet without emojis, only text
         tweet["TweetwithoutEmoji"] = tweet_without_emoji
-        #2) tweet with text AND description of emoji (e.g. "sad face")
+        #2) tweet with text AND description of emoji (e.g. ":sad_face:")
         tweet["TweetwithEmojidescription"] = emoji.demojize(tweet["tweetwithoutURL"])
-        #3) list of all emojis in tweet (again, description of the emoji)
+         #3) list of all emojis in tweet (again, description of the emoji)
         tweet["Emojis"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetwithoutURL"])]
+        # Substitute ":" by '' and "_" by " " for further processing
+        for emoj in tweet["Emojis"]:
+            modified_emoji = re.sub(r':', '', emoj)
+            modified_emoji = re.sub(r'_', ' ', modified_emoji)
+            # Add <e> and <\e> tags around the modified emoji
+            modified_emoji_with_tags = "<e> " + modified_emoji + " </e>"
+            tweet["TweetwithEmojidescription"] = tweet["TweetwithEmojidescription"].replace(emoj, modified_emoji_with_tags)
     return dataset
+
 
 
 def pos_tagging(dataset):
@@ -147,6 +154,14 @@ dataset = load_dataset(DATA_PATH)
 dataset = cleanURLS(dataset)
 dataset = handling_emojis(dataset)
 dataset = tokenizer(dataset)
+
+def sentiment(dataset):
+    for tweet in dataset:
+        scores = analyzer.polarity_scores(tweet["TweetwithEmojidescription"])
+        tweet["Sentiment"] = scores
+        #store range between positive and negative sentiment
+        tweet["polarity"] = tweet["Sentiment"]["pos"] - tweet["Sentiment"]["neg"]
+    return dataset
 
 print(dataset)
 
