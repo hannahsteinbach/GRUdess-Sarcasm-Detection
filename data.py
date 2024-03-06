@@ -8,6 +8,8 @@ import emoji
 
 DATA_PATH = './data/train.SemEval.csv'
 
+analyzer = SentimentIntensityAnalyzer()
+
 def load_dataset(filename: str):
     """
     Function that reads the dataset and saves information about a
