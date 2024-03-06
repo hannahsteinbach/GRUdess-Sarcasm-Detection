@@ -2,6 +2,7 @@ import csv
 #from nltk.tokenize import word_tokenize
 from somajo import SoMaJo
 from someweta import ASPTagger
+from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
 
