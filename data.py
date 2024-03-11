@@ -5,8 +5,9 @@ from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
+import html
 
-DATA_PATH = './data/train.SemEval.csv'
+DATA_PATH = './data/train.En__1_.csv'
 
 analyzer = SentimentIntensityAnalyzer()
 
@@ -40,10 +41,12 @@ def load_dataset(filename: str):
         next(data)
 
         for row in data:
+            # this converts html encoded text to normal text (solves &amp problem)
+            decoded_row = [html.unescape(cell) for cell in row]
             tweet_dict = dict()
-            tweet_dict["tweetID"] = row[0]
-            tweet_dict["tweetText"] = row[1]
-            tweet_dict["class"] = int(row[2])
+            tweet_dict["tweetID"] = decoded_row[0]
+            tweet_dict["tweetText"] = decoded_row[1]
+            tweet_dict["class"] = int(decoded_row[2])
 
             dataset.append(tweet_dict)
 
@@ -51,8 +54,8 @@ def load_dataset(filename: str):
                 #rephrases get their own dictionary entry
                 #same ID as original tweets, we still know what the rephrase/OG tweet is bc of class
                 rephrase_dict = dict()
-                rephrase_dict["tweetID"] = row[0]
-                rephrase_dict["tweetText"] = row[3]
+                rephrase_dict["tweetID"] = decoded_row[0]
+                rephrase_dict["tweetText"] = decoded_row[3]
                 rephrase_dict["class"] = 0
                 dataset.append(rephrase_dict)
 
