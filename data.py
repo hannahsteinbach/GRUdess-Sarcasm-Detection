@@ -18,18 +18,17 @@ def load_dataset(filename: str):
     It contains: ID, Tweet, Classification, Rephrasing.
 
     Input:
-    1. filename (str)   : Name of the file that is supposed to be read in.
+    1. filename (str)   :   Name of the file that is supposed to be read in.
 
     Output:
-    1. dataset (list)   : List which listelements is a dictionary for each
-                            Tweet in the given dataset. Each dictionary has
+    1. dataset (list)   :   List of dictionaries where each element is a
+                            Tweet from the given dataset. Each dictionary has
                             the following keys:
-                            tweetID
-                            tweetText
-                            class
-                          The rephrases are handeled as individual tweets.
-
-
+                                tweetID
+                                tweetText
+                                class
+                            More keys are added in the following steps.
+                            Sarcastic rephrases are handled as individual tweets.
     """
     dataset = list()
 
@@ -62,20 +61,85 @@ def load_dataset(filename: str):
     return dataset
 
 
+def cleanURLS(dataset: list):
+    """
+    Function that removes URLs from our analysis.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            The dictionary key "tweetText" contains the
+                            text to be modified for URL removal.
+
+    Output:
+    1. dataset (list)   :   Inputted dataset that contains tweet versions
+                            that are completely free of URLs. A new key 
+                            "tweetwithoutURL" has been added
+                            accordingly.
+    """
+    url_pattern = re.compile(r'https?://\S+|www\.\S+')
+    # go through the dataset
+    for tweet in dataset:
+        # take the text element from the dict
+        tweet_toclean = tweet["tweetText"]
+        # remove URLs from text
+        no_URL = url_pattern.sub('', tweet_toclean)
+        # create a new dict-element with the clean text
+        tweet["tweetWithoutURL"] = no_URL
+    return dataset
+
+
+def handling_emojis(dataset: list):
+    """
+    Function that separates and prepares emojis for further processing.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries. The dictionary key "tweetwithoutURL" contains the
+                            text to be modified for emoji processing.
+                        
+    Output:
+    1. dataset (list)   :   Inputted dataset with several added dictionary entries:
+                                "tweetWithoutEmoji"         :   tweet formatted as a string without emojis
+                                "tweetWithEmojiDescription" :   tweet formatted as a string with emoji description;
+                                                                emojis are replaced by their description and delimited
+                                                                by "<e>" and "</e." (e.g., <e> sad face </e>)
+                                "emojis"                    :   list of all emojis that appear in the tweet;
+                                                                each emoji is formatted as a string with emoji 
+                                                                description delimited by colons and whitespace 
+                                                                replaced by underscores (e.g., ":sad_face:")
+    """
+    for tweet in dataset:
+        #remove emojis of a tweet
+        tweet_without_emoji = emoji.replace_emoji(tweet["tweetWithoutURL"], replace='')
+        #three different entries:
+        #1) tweet without emojis, only text
+        tweet["tweetWithoutEmoji"] = tweet_without_emoji
+        #2) tweet with text AND description of emoji (e.g. ":sad_face:")
+        tweet["tweetWithEmojiDescription"] = emoji.demojize(tweet["tweetwithoutURL"])
+         #3) list of all emojis in tweet (again, description of the emoji)
+        tweet["emojis"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetwithoutURL"])]
+        # Substitute ":" by '' and "_" by " " for further processing
+        for emoj in tweet["emojis"]:
+            modified_emoji = re.sub(r':', '', emoj)
+            modified_emoji = re.sub(r'_', ' ', modified_emoji)
+            # Add <e> and <\e> tags around the modified emoji
+            modified_emoji_with_tags = "<e> " + modified_emoji + " </e>"
+            tweet["tweetWithEmojiDescription"] = tweet["tweetWithEmojiDescription"].replace(emoj, modified_emoji_with_tags)
+    return dataset
+
+
 def tokenizer(dataset: list):
     """
     Function that tokenizes the text in a given dataset.
-    And additionally adds Part Of Speech Tags for each token.
 
     Input:
-    1. dataset (list)   : A list which contains a dictionary.
-                            Dictionary key "tweetText" contains the
+    1. dataset (list)   :   A list of dictionaries.
+                            The dictionary key "tweetWithoutEmoji" contains the
                             text which is supposed to be tokenized.
 
     Output:
-    1. dataset (list)   : The same dataset (list) that was given as input
-                            but the key "tweetTokenized" has been added
-                            which holds the tokenized sentence.
+    1. dataset (list)   :   Inputted dataset that has been modified to include
+                            the tokenized tweet, added under the new key
+                            "tweetTokenized". 
     """
     # create object for tokenizer
     tokenizer = SoMaJo("en_PTB", split_sentences=False)
@@ -83,7 +147,7 @@ def tokenizer(dataset: list):
     # go through the dataset
     for tweet in dataset:
         # take the text element from the dict
-        to_tokenize = [tweet["TweetwithoutEmoji"]]  # must be list for tokenizer
+        to_tokenize = [tweet["tweetWithoutEmoji"]]  # must be list for tokenizer
         # tokenize the sentence (without emojis)
         tokenized_obj = tokenizer.tokenize_text(to_tokenize)
         for paragraph in tokenized_obj:
@@ -93,42 +157,26 @@ def tokenizer(dataset: list):
     return dataset
 
 
-def cleanURLS(dataset: list):
-    url_pattern = re.compile(r'https?://\S+|www\.\S+')
-    # go through the dataset
-    for tweet in dataset:
-        # take the text element from the dict
-        tweet_toclean = tweet["tweetText"]
-        # remove URLs from text
-        no_URL = url_pattern.sub('', tweet_toclean)
-        # create a new dict-element with the clean text
-        tweet["tweetwithoutURL"] = no_URL
-    return dataset
+dataset = load_dataset(DATA_PATH)
+dataset = cleanURLS(dataset)
+dataset = handling_emojis(dataset)
+dataset = tokenizer(dataset)
 
 
-def handling_emojis(dataset: list):
-    for tweet in dataset:
-        #remove emojis of a tweet
-        tweet_without_emoji = emoji.replace_emoji(tweet["tweetwithoutURL"], replace='')
-        #three different entries:
-        #1) tweet without emojis, only text
-        tweet["TweetwithoutEmoji"] = tweet_without_emoji
-        #2) tweet with text AND description of emoji (e.g. ":sad_face:")
-        tweet["TweetwithEmojidescription"] = emoji.demojize(tweet["tweetwithoutURL"])
-         #3) list of all emojis in tweet (again, description of the emoji)
-        tweet["Emojis"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetwithoutURL"])]
-        # Substitute ":" by '' and "_" by " " for further processing
-        for emoj in tweet["Emojis"]:
-            modified_emoji = re.sub(r':', '', emoj)
-            modified_emoji = re.sub(r'_', ' ', modified_emoji)
-            # Add <e> and <\e> tags around the modified emoji
-            modified_emoji_with_tags = "<e> " + modified_emoji + " </e>"
-            tweet["TweetwithEmojidescription"] = tweet["TweetwithEmojidescription"].replace(emoj, modified_emoji_with_tags)
-    return dataset
-
+########### FEATURE EXTRACTION ###########
 
 
 def pos_tagging(dataset):
+    """
+    Function that attaches POS tags to the tokenized text in the dataset.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            FURTHER INFO TO BE ADDED 
+
+    Output:
+    TO BE DETERMINED
+    """
     # load model
     model = "english_newspaper_2017-09-15.model"
 
@@ -156,18 +204,25 @@ def pos_tagging(dataset):
     return dataset
 
 
-dataset = load_dataset(DATA_PATH)
-dataset = cleanURLS(dataset)
-dataset = handling_emojis(dataset)
-dataset = tokenizer(dataset)
-
 def sentiment(dataset):
+    """
+    Function that calculates the sentiment score.
+    MORE INFO TO BE ADDED.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            FURTHER INFO TO BE ADDED   
+
+    Output:
+    TO BE DETERMINED
+    """
     for tweet in dataset:
-        scores = analyzer.polarity_scores(tweet["TweetwithEmojidescription"])
+        scores = analyzer.polarity_scores(tweet["tweetwithEmojidescription"])
         tweet["Sentiment"] = scores
         #store range between positive and negative sentiment
         tweet["polarity"] = tweet["Sentiment"]["pos"] - tweet["Sentiment"]["neg"]
     return dataset
+
 
 print(dataset)
 
