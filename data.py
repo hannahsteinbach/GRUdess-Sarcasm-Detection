@@ -13,9 +13,8 @@ analyzer = SentimentIntensityAnalyzer()
 
 def load_dataset(filename: str):
     """
-    Function that reads the dataset and saves information about a
-    tweet within a dictionary.
-    It contains: ID, Tweet, Classification, Rephrasing.
+    Function that reads the dataset, converts HTML encoded text to plain text, 
+    and saves information about a tweet within a dictionary.
 
     Input:
     1. filename (str)   :   Name of the file that is supposed to be read in.
@@ -24,9 +23,10 @@ def load_dataset(filename: str):
     1. dataset (list)   :   List of dictionaries where each element is a
                             Tweet from the given dataset. Each dictionary has
                             the following keys:
-                                tweetID
-                                tweetText
-                                class
+                                tweetID     :   numeric ID of the tweet
+                                tweetText   :   text of the tweet formatted as a string
+                                class       :   classification of the tweet as 
+                                                non-sarcastic (0) or sarcastic (1)
                             More keys are added in the following steps.
                             Sarcastic rephrases are handled as individual tweets.
     """
@@ -40,7 +40,7 @@ def load_dataset(filename: str):
         next(data)
 
         for row in data:
-            # this converts html encoded text to normal text (solves &amp problem)
+            # this converts html encoded text to plain text (solves &amp problem)
             decoded_row = [html.unescape(cell) for cell in row]
             tweet_dict = dict()
             tweet_dict["tweetID"] = decoded_row[0]
