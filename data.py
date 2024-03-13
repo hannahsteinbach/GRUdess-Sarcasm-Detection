@@ -1,3 +1,4 @@
+from tqdm import tqdm
 import csv
 #from nltk.tokenize import word_tokenize
 from somajo import SoMaJo
@@ -157,10 +158,314 @@ def tokenizer(dataset: list):
     return dataset
 
 
+def handling_emoticons(dataset: list):
+    """
+    
+    """
+    total_iterations = len(dataset)
+    progressBar = tqdm(total=total_iterations, desc="Handling Emoticons")
+
+    # slightly modified dict of emoticons by 
+    # https://github.com/NeelShah18/emot/blob/master/emot/emo_unicode.py
+    # Modification: removed "or smiley" terms
+    # added :p, :s, ¯\\_(ツ)_/¯
+
+    # dictionary of emoticons
+    EMOTICONS_EMO = {
+        u"¯\\_(ツ)_/¯": "shrug of the shoulders",
+        u":‑)":"Happy face",
+        u":-))":"Very Happy face",
+        u":-)))":"Very very Happy face",
+        u":)":"Happy face",
+        u":))":"Very Happy face",
+        u":)))":"Very very Happy face",
+        u":-]":"Happy face",
+        u":]":"Happy face",
+        u":-3":"Happy face",
+        u":3":"Happy face",
+        u":->":"Happy face",
+        u":>":"Happy face",
+        u"8-)":"Happy face",
+        u":o)":"Happy face",
+        u":-}":"Happy face",
+        u":}":"Happy face",
+        u":-)":"Happy face",
+        u":c)":"Happy face",
+        u":^)":"Happy face",
+        u"=]":"Happy face",
+        u"=)":"Happy face",
+        u":‑D":"Laughing, big grin or laugh with glasses",
+        u":D":"Laughing, big grin or laugh with glasses",
+        u"8‑D":"Laughing, big grin or laugh with glasses",
+        u"8D":"Laughing, big grin or laugh with glasses",
+        u"X‑D":"Laughing, big grin or laugh with glasses",
+        u"XD":"Laughing, big grin or laugh with glasses",
+        u"xD":"Laughing, big grin or laugh with glasses",
+        u"=D":"Laughing, big grin or laugh with glasses",
+        u"=3":"Laughing, big grin or laugh with glasses",
+        u"B^D":"Laughing, big grin or laugh with glasses",
+        u":-))":"Very happy",
+        u":-(":"Frown, sad, angry or pouting",
+        u":‑(":"Frown, sad, angry or pouting",
+        u":(":"Frown, sad, angry or pouting",
+        u":‑c":"Frown, sad, angry or pouting",
+        u":c":"Frown, sad, angry or pouting",
+        u":‑<":"Frown, sad, angry or pouting",
+        u":<":"Frown, sad, angry or pouting",
+        u":‑[":"Frown, sad, angry or pouting",
+        u":[":"Frown, sad, angry or pouting",
+        u":-||":"Frown, sad, angry or pouting",
+        u">:[":"Frown, sad, angry or pouting",
+        u":{":"Frown, sad, angry or pouting",
+        u":@":"Frown, sad, angry or pouting",
+        u">:(":"Frown, sad, angry or pouting",
+        u":'‑(":"Crying",
+        u":'(":"Crying",
+        u":'‑)":"Tears of happiness",
+        u":')":"Tears of happiness",
+        u"D‑':":"Horror",
+        u"D:<":"Disgust",
+        u"D:":"Sadness",
+        u"D8":"Great dismay",
+        u"D;":"Great dismay",
+        u"D=":"Great dismay",
+        u"DX":"Great dismay",
+        u":‑O":"Surprise",
+        u":O":"Surprise",
+        u":‑o":"Surprise",
+        u":o":"Surprise",
+        u":-0":"Shock",
+        u"8‑0":"Yawn",
+        u">:O":"Yawn",
+        u":-*":"Kiss",
+        u":*":"Kiss",
+        u":X":"Kiss",
+        u";‑)":"Wink or smirk",
+        u";)":"Wink or smirk",
+        u"*-)":"Wink or smirk",
+        u"*)":"Wink or smirk",
+        u";‑]":"Wink or smirk",
+        u";]":"Wink or smirk",
+        u";^)":"Wink or smirk",
+        u":‑,":"Wink or smirk",
+        u";D":"Wink or smirk",
+        u":‑P":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u":P":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u":p":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u"X‑P":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u"XP":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u":‑Þ":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u":Þ":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u":b":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u"d:":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u"=p":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u">:P":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u":‑/":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":/":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":-[.]":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u">:[(\)]":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u">:/":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":[(\)]":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u"=/":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u"=[(\)]":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":L":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u"=L":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":S":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":s":"Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":‑|":"Straight face",
+        u":|":"Straight face",
+        u":$":"Embarrassed or blushing",
+        u":‑x":"Sealed lips or wearing braces or tongue-tied",
+        u":x":"Sealed lips or wearing braces or tongue-tied",
+        u":‑#":"Sealed lips or wearing braces or tongue-tied",
+        u":#":"Sealed lips or wearing braces or tongue-tied",
+        u":‑&":"Sealed lips or wearing braces or tongue-tied",
+        u":&":"Sealed lips or wearing braces or tongue-tied",
+        u"O:‑)":"Angel, saint or innocent",
+        u"O:)":"Angel, saint or innocent",
+        u"0:‑3":"Angel, saint or innocent",
+        u"0:3":"Angel, saint or innocent",
+        u"0:‑)":"Angel, saint or innocent",
+        u"0:)":"Angel, saint or innocent",
+        u":‑b":"Tongue sticking out, cheeky, playful or blowing a raspberry",
+        u"0;^)":"Angel, saint or innocent",
+        u">:‑)":"Evil or devilish",
+        u">:)":"Evil or devilish",
+        u"}:‑)":"Evil or devilish",
+        u"}:)":"Evil or devilish",
+        u"3:‑)":"Evil or devilish",
+        u"3:)":"Evil or devilish",
+        u">;)":"Evil or devilish",
+        u"|;‑)":"Cool",
+        u"|‑O":"Bored",
+        u":‑J":"Tongue-in-cheek",
+        u"#‑)":"Party all night",
+        u"%‑)":"Drunk or confused",
+        u"%)":"Drunk or confused",
+        u":-###..":"Being sick",
+        u":###..":"Being sick",
+        u"<:‑|":"Dump",
+        u"(>_<)":"Troubled",
+        u"(>_<)>":"Troubled",
+        u"(';')":"Baby",
+        u"(^^>``":"Nervous or Embarrassed or Troubled or Shy or Sweat drop",
+        u"(^_^;)":"Nervous or Embarrassed or Troubled or Shy or Sweat drop",
+        u"(-_-;)":"Nervous or Embarrassed or Troubled or Shy or Sweat drop",
+        u"(~_~;) (・.・;)":"Nervous or Embarrassed or Troubled or Shy or Sweat drop",
+        u"(-_-)zzz":"Sleeping",
+        u"(^_-)":"Wink",
+        u"((+_+))":"Confused",
+        u"(+o+)":"Confused",
+        u"(o|o)":"Ultraman",
+        u"^_^":"Joyful",
+        u"(^_^)/":"Joyful",
+        u"(^O^)／":"Joyful",
+        u"(^o^)／":"Joyful",
+        u"(__)":"Kowtow as a sign of respect, or dogeza for apology",
+        u"_(._.)_":"Kowtow as a sign of respect, or dogeza for apology",
+        u"<(_ _)>":"Kowtow as a sign of respect, or dogeza for apology",
+        u"<m(__)m>":"Kowtow as a sign of respect, or dogeza for apology",
+        u"m(__)m":"Kowtow as a sign of respect, or dogeza for apology",
+        u"m(_ _)m":"Kowtow as a sign of respect, or dogeza for apology",
+        u"('_')":"Sad or Crying",
+        u"(/_;)":"Sad or Crying",
+        u"(T_T) (;_;)":"Sad or Crying",
+        u"(;_;":"Sad of Crying",
+        u"(;_:)":"Sad or Crying",
+        u"(;O;)":"Sad or Crying",
+        u"(:_;)":"Sad or Crying",
+        u"(ToT)":"Sad or Crying",
+        u";_;":"Sad or Crying",
+        u";-;":"Sad or Crying",
+        u";n;":"Sad or Crying",
+        u";;":"Sad or Crying",
+        u"Q.Q":"Sad or Crying",
+        u"T.T":"Sad or Crying",
+        u"QQ":"Sad or Crying",
+        u"Q_Q":"Sad or Crying",
+        u"(-.-)":"Shame",
+        u"(-_-)":"Shame",
+        u"(一一)":"Shame",
+        u"(；一_一)":"Shame",
+        u"(=_=)":"Tired",
+        u"(=^·^=)":"cat",
+        u"(=^··^=)":"cat",
+        u"=_^= ":"cat",
+        u"(..)":"Looking down",
+        u"(._.)":"Looking down",
+        u"^m^":"Giggling with hand covering mouth",
+        u"(・・?":"Confusion",
+        u"(?_?)":"Confusion",
+        u">^_^<":"Normal Laugh",
+        u"<^!^>":"Normal Laugh",
+        u"^/^":"Normal Laugh",
+        u"（*^_^*）" :"Normal Laugh",
+        u"(^<^) (^.^)":"Normal Laugh",
+        u"(^^)":"Normal Laugh",
+        u"(^.^)":"Normal Laugh",
+        u"(^_^.)":"Normal Laugh",
+        u"(^_^)":"Normal Laugh",
+        u"(^^)":"Normal Laugh",
+        u"(^J^)":"Normal Laugh",
+        u"(*^.^*)":"Normal Laugh",
+        u"(^—^）":"Normal Laugh",
+        u"(#^.^#)":"Normal Laugh",
+        u"（^—^）":"Waving",
+        u"(;_;)/~~~":"Waving",
+        u"(^.^)/~~~":"Waving",
+        u"(-_-)/~~~ ($··)/~~~":"Waving",
+        u"(T_T)/~~~":"Waving",
+        u"(ToT)/~~~":"Waving",
+        u"(*^0^*)":"Excited",
+        u"(*_*)":"Amazed",
+        u"(*_*;":"Amazed",
+        u"(+_+) (@_@)":"Amazed",
+        u"(*^^)v":"Laughing,Cheerful",
+        u"(^_^)v":"Laughing,Cheerful",
+        u"((d[-_-]b))":"Headphones,Listening to music",
+        u'(-"-)':"Worried",
+        u"(ーー;)":"Worried",
+        u"(^0_0^)":"Eyeglasses",
+        u"(＾ｖ＾)":"Happy",
+        u"(＾ｕ＾)":"Happy",
+        u"(^)o(^)":"Happy",
+        u"(^O^)":"Happy",
+        u"(^o^)":"Happy",
+        u")^o^(":"Happy",
+        u":O o_O":"Surprised",
+        u"o_0":"Surprised",
+        u"o.O":"Surpised",
+        u"(o.o)":"Surprised",
+        u"oO":"Surprised",
+        u"(*￣m￣)":"Dissatisfied",
+        u"(‘A`)":"Snubbed or Deflated",
+    }
+    
+    # go through each tweet 
+    for tweet in dataset:
+        # check for each token if it consists of only alphabetical 
+        # characters
+        for token in tweet["tweetTokenized"]:
+            check_emoticon = token.isalpha()
+
+            if check_emoticon == False and len(token) >= 2:
+                # if False, check which one it is
+
+                """
+                    Comment regarding inefficiency:
+                    This could have been also handled the other way around,
+                    look, if the token is within the keys BUT
+                    there could be cases with :DDD, where the emoticon
+                    is exaggerated. These cases would become lost
+                """
+                for key in EMOTICONS_EMO.keys():
+                    if key in token:
+
+                        # append emoticon to list of emojis
+                        tweet["emojis"].append(EMOTICONS_EMO[key])
+
+                        # create replacement
+                        replacement = "<e> " + EMOTICONS_EMO[key] + " </e>"
+                        
+                        # replace emoticon with the description
+                        tweet["tweetWithEmojiDescription"] = tweet["tweetWithEmojiDescription"].replace(token, replacement)
+
+                        # delete emoticon from other entry
+                        tweet["tweetWithoutEmoji"] = tweet["tweetWithoutEmoji"].replace(token, "")
+
+                        break
+
+            elif token == "xD" or token == "XD":
+                replacement = "<e> " + EMOTICONS_EMO["xD"] + " </e>"
+
+                # replace emoticon with the description
+                tweet["tweetWithEmojiDescription"] = tweet["tweetWithEmojiDescription"].replace(token, replacement)
+
+                # delete emoticon from other entry
+                tweet["tweetWithoutEmoji"] = tweet["tweetWithoutEmoji"].replace(token, "")
+
+
+            elif token == "XP":
+                replacement = "<e> " + EMOTICONS_EMO["xP"] + " </e>"
+
+                # replace emoticon with the description
+                tweet["tweetWithEmojiDescription"] = tweet["tweetWithEmojiDescription"].replace(token, replacement)
+
+                # delete emoticon from other entry
+                tweet["tweetWithoutEmoji"] = tweet["tweetWithoutEmoji"].replace(token, "")
+
+        progressBar.update(1)
+
+    progressBar.close()
+
+    return dataset 
+
+
 dataset = load_dataset(DATA_PATH)
 dataset = cleanURLS(dataset)
 dataset = handling_emojis(dataset)
 dataset = tokenizer(dataset)
+dataset = handling_emoticons(dataset)
 
 
 ########### FEATURE EXTRACTION ###########
