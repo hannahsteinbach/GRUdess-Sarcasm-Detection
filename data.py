@@ -73,7 +73,7 @@ def cleanURLS(dataset: list):
     Output:
     1. dataset (list)   :   Inputted dataset that contains tweet versions
                             that are completely free of URLs. A new key 
-                            "tweetwithoutURL" has been added
+                            "tweetWithoutURL" has been added
                             accordingly.
     """
     url_pattern = re.compile(r'https?://\S+|www\.\S+')
@@ -93,7 +93,7 @@ def handling_emojis(dataset: list):
     Function that separates and prepares emojis for further processing.
 
     Input:
-    1. dataset (list)   :   A list of dictionaries. The dictionary key "tweetwithoutURL" contains the
+    1. dataset (list)   :   A list of dictionaries. The dictionary key "tweetWithoutURL" contains the
                             text to be modified for emoji processing.
                         
     Output:
@@ -114,9 +114,9 @@ def handling_emojis(dataset: list):
         #1) tweet without emojis, only text
         tweet["tweetWithoutEmoji"] = tweet_without_emoji
         #2) tweet with text AND description of emoji (e.g. ":sad_face:")
-        tweet["tweetWithEmojiDescription"] = emoji.demojize(tweet["tweetwithoutURL"])
+        tweet["tweetWithEmojiDescription"] = emoji.demojize(tweet["tweetWithoutURL"])
          #3) list of all emojis in tweet (again, description of the emoji)
-        tweet["emojis"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetwithoutURL"])]
+        tweet["emojis"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetWithoutURL"])]
         # Substitute ":" by '' and "_" by " " for further processing
         for emoj in tweet["emojis"]:
             modified_emoji = re.sub(r':', '', emoj)
@@ -217,7 +217,7 @@ def sentiment(dataset):
     TO BE DETERMINED
     """
     for tweet in dataset:
-        scores = analyzer.polarity_scores(tweet["tweetwithEmojidescription"])
+        scores = analyzer.polarity_scores(tweet["tweetWithEmojidescription"])
         tweet["Sentiment"] = scores
         #store range between positive and negative sentiment
         tweet["polarity"] = tweet["Sentiment"]["pos"] - tweet["Sentiment"]["neg"]
