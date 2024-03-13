@@ -77,6 +77,10 @@ def cleanURLS(dataset: list):
                             "tweetWithoutURL" has been added
                             accordingly.
     """
+
+    total_iterations = len(dataset)
+    progressBar = tqdm(total=total_iterations, desc="Handling URLs")
+
     url_pattern = re.compile(r'https?://\S+|www\.\S+')
     # go through the dataset
     for tweet in dataset:
@@ -86,6 +90,11 @@ def cleanURLS(dataset: list):
         no_URL = url_pattern.sub('', tweet_toclean)
         # create a new dict-element with the clean text
         tweet["tweetWithoutURL"] = no_URL
+
+        progressBar.update(1)
+
+    progressBar.close()
+
     return dataset
 
 
@@ -108,6 +117,10 @@ def handling_emojis(dataset: list):
                                                                 description delimited by colons and whitespace 
                                                                 replaced by underscores (e.g., ":sad_face:")
     """
+
+    total_iterations = len(dataset)
+    progressBar = tqdm(total=total_iterations, desc="Handling Emojis")
+
     for tweet in dataset:
         #remove emojis of a tweet
         tweet_without_emoji = emoji.replace_emoji(tweet["tweetWithoutURL"], replace='')
@@ -125,6 +138,11 @@ def handling_emojis(dataset: list):
             # Add <e> and <\e> tags around the modified emoji
             modified_emoji_with_tags = "<e> " + modified_emoji + " </e>"
             tweet["tweetWithEmojiDescription"] = tweet["tweetWithEmojiDescription"].replace(emoj, modified_emoji_with_tags)
+
+        progressBar.update(1)
+
+    progressBar.close()
+
     return dataset
 
 
@@ -142,6 +160,10 @@ def tokenizer(dataset: list):
                             the tokenized tweet, added under the new key
                             "tweetTokenized". 
     """
+
+    total_iterations = len(dataset)
+    progressBar = tqdm(total=total_iterations, desc="Tokenizing")
+
     # create object for tokenizer
     tokenizer = SoMaJo("en_PTB", split_sentences=False)
 
@@ -155,6 +177,11 @@ def tokenizer(dataset: list):
             tokenized_tweet = [token.text for token in paragraph]
         # create a new dict-element with the tokenized text
         tweet["tweetTokenized"] = tokenized_tweet
+
+        progressBar.update(1)
+
+    progressBar.close()
+    
     return dataset
 
 
