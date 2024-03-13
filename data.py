@@ -170,7 +170,7 @@ def tokenizer(dataset: list):
     # go through the dataset
     for tweet in dataset:
         # take the text element from the dict
-        to_tokenize = [tweet["tweetWithoutEmoji"]]  # must be list for tokenizer
+        to_tokenize = [tweet["tweetText"]]  # must be list for tokenizer
         # tokenize the sentence (without emojis)
         tokenized_obj = tokenizer.tokenize_text(to_tokenize)
         for paragraph in tokenized_obj:
