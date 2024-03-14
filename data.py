@@ -7,6 +7,10 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
 import html
+import gensim
+from gensim.models import word2vec
+from gensim.models.word2vec import Word2Vec
+import gensim.downloader as api
 
 DATA_PATH = './data/train.En__1_.csv'
 
@@ -488,11 +492,64 @@ def handling_emoticons(dataset: list):
     return dataset 
 
 
+def include_word2vec(dataset):
+    """
+        Function to include word2vec word embeddings.
+
+        
+        INFORMATION
+        We could try out different models, the higher thhe
+        dimension though, the more accurate the results 
+    """
+
+    total_iterations = len(dataset)
+    progressBar = tqdm(total=total_iterations, desc="Word Embeddings")
+
+    # load pre-trained model
+    wv = api.load("glove-twitter-100")
+    # save the vectors
+    # wv.save("./used_models/vectors.kv")
+    # wv = "./used_models/vectors.kv"
+    for tweet in dataset:
+        tokenized_sentence = tweet["tweetTokenized"]
+
+        # create dictionary key for embeddings
+        tweet["tweetTokenEmbeddings"] = list()
+
+        # get dimension of vctor (based on chosen model)
+        vector_size = wv.vector_size
+        # initialize the vector
+        wv_res = np.zeros(vector_size)
+
+        # count the words that are represented as
+        # vector --> later for the average of thee sentence
+        counter = 0
+
+        for token in tokenized_sentence:
+            if token in wv:
+                tweet["tweetTokenEmbeddings"].append(wv[token])
+                # counter += 1
+                # wv_res += wv[token]
+                # tweet["tweetTokenEmbeddings"].append(wv_res)
+            else:
+                tweet["tweetTokenEmbeddings"].append(None)
+
+        # compute average of the sentence
+        # wv_res = wv_res/counter
+
+        progressBar.update(1)
+
+    progressBar.close()
+
+    return dataset
+
+
 dataset = load_dataset(DATA_PATH)
 dataset = cleanURLS(dataset)
 dataset = handling_emojis(dataset)
 dataset = tokenizer(dataset)
 dataset = handling_emoticons(dataset)
+dataset = include_word2vec(dataset)
 
 
 ########### FEATURE EXTRACTION ###########
