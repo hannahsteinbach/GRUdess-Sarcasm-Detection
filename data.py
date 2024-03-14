@@ -552,6 +552,37 @@ dataset = handling_emoticons(dataset)
 dataset = include_word2vec(dataset)
 
 
+########### PRE-PROCESSING FOR GRU ###########
+
+def vocabulary(dataset):
+    """
+        Function which creates the vocabulary for our data 
+
+        Output:
+        dataset with 1 new key vocabularyDeescriptions, based on tokenized tweet
+
+        INFORMATION:
+            DISCUSS WHICH ONE - WITH EMOJIS OR WITH DESCRIPTIONS? IN GENERAL FOR 
+            ALL THE PREPROCESSING STEPS
+            I TEND TO WITH DESCRIPTIONS
+    """
+
+    total_iterations = len(dataset)
+    progressBar = tqdm(total=total_iterations, desc="Word Embeddings")
+
+    vocabulary_set = set()
+
+    for tweet in dataset:
+        for token in tweet["tweetTokenized"]:
+            vocabulary_set.add(token)
+    
+        progressBar.update(1)
+
+    progressBar.close()
+
+    return vocabulary_set
+
+
 ########### FEATURE EXTRACTION ###########
 
 
