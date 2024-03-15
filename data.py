@@ -11,6 +11,7 @@ import gensim
 from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
+import numpy as np
 
 DATA_PATH = './data/train.En__1_.csv'
 
