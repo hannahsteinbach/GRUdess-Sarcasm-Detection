@@ -645,6 +645,40 @@ def sentiment(dataset):
     return dataset
 
 
+def uni_and_bigrams(dataset):
+    """
+    Function to create unigrams and bigrams.
+
+    Input:
+    dataset (list)  :   List of dictionaries containing tokenized tweets.
+
+    Output:
+    dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
+    """
+
+    unigrams = set()
+    bigrams = set()
+
+    for tweet in dataset:
+        
+        unigram = tweet["tweetTokenized"]
+
+        # unigrams are really just individual tokens
+        unigrams.update(unigram)
+
+        # bigrams are consecutive tokens separated by a whitespace
+        bigrams = [unigram[i] + "_" + unigram[i+1] for i in range(len(unigram)-1)]
+        bigrams.update(bigrams)
+
+    # we use binary indicators for unigrams and bigrams (to check whether they are present in a tweet or not)
+    for tweet in dataset:
+        tweet["unigramsIndicators"] = [1 if unigram in unigrams else 0 for token in unigram]
+        tweet["bigramIndicators"] = [1 if bigram in bigrams else 0 for bigram in bigrams]
+
+    return dataset
+
+
+dataset = uni_and_bigrams(dataset)
 print(dataset)
 
 """ - don't delete yet, still needed script in there 
