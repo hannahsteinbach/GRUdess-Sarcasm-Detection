@@ -706,28 +706,6 @@ def tweet_length_tokenized(dataset):
     return dataset
 
 
-def tweet_length(dataset):
-    """
-    Function to add tweet length as a feature.
-
-    Input:
-    1. dataset (list)   :   A list of dictionaries.
-                            This version measures the nontokenized tweet. 
-                            The dictionary key "tweetText" contains the
-                            text to be "measured".
-
-    Output:
-    1. dataset (list)   :   The input dataset with an additional (one item)
-                            vector representing tweet length 
-                            concatenated at the end.
-    """
-
-    for tweet in dataset:
-        tweet["tweetLength"] = [len(tweet["tweetText"][0])]
-
-    return dataset
-
-
 def all_caps_counts(dataset):
     """
     Function that counts how many words in a tweet are written in all caps and how many 
@@ -748,7 +726,7 @@ def all_caps_counts(dataset):
         firstCaps = []
         allCaps = []
         
-        for word in range(len(tweet["tweetTokenized"])-1):
+        for index, word in enumerate(tweet["tweetTokenized"]):
 
             #if token is a word (we should be careful: assumption that all words only contain letters)
             if word.isalpha():
@@ -757,7 +735,8 @@ def all_caps_counts(dataset):
                 else:
                     firstCaps.append(0)
                 if word.isupper():
-                    allCaps.append(1)
+                    if word != "I" and word != "XD":
+                        allCaps.append(1)
                 else:
                     allCaps.append(0)
         
@@ -765,35 +744,6 @@ def all_caps_counts(dataset):
         tweet["initCapsCount"] = firstCaps
         tweet["allCapsCount"] = allCaps
     
-    return dataset
-
-
-def same_vowel_count(dataset):
-    """
-    Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating vowels.
-
-    Input:
-    1. dataset (list)   :   A list of dictionaries.
-                            The dictionary key "tweetTokenized" contains the text to be used.
-
-    Output:
-    1. dataset (list)   :   The input dataset with the additional an additional keys:
-                                "repeatingVowelsWords"     :   number of words with more than 2 consecutive vowels in each tweet
-    """
-
-    for tweet in dataset:
-        repeating_vowels_words = []
-
-        for word in tweet["tweetTokenized"]:
-    
-            if re.search(r'([aeiouAEIOU])\1{2,}', word, flags=re.IGNORECASE):
-                repeating_vowels_words.append(1)
-            else:
-                repeating_vowels_words.append(0)
-        
-        
-        tweet["repeatingVowelsWords"] = repeating_vowels_words
-
     return dataset
 
 
@@ -814,11 +764,11 @@ def same_letter_count(dataset):
         repeating_letters_words = []
 
         for word in tweet["tweetTokenized"]:
-    
-            if re.search(r'(\w)\1{2,}', word, flags=re.IGNORECASE):
-                repeating_letters_words.append(1)
-            else:
-                repeating_letters_words.append(0)
+            if word.isalpha():
+                if re.search(r'(\w)\1{2,}', word, flags=re.IGNORECASE):
+                    repeating_letters_words.append(1)
+                else:
+                    repeating_letters_words.append(0)
         
         tweet["repeatingLettersWords"] = repeating_letters_words
 
@@ -826,9 +776,7 @@ def same_letter_count(dataset):
 
 dataset = uni_and_bigrams(dataset)
 dataset = tweet_length_tokenized(dataset)
-dataset = tweet_length(dataset)
 dataset = all_caps_counts(dataset)
-dataset = same_vowel_count(dataset)
 dataset = same_letter_count(dataset)
 print(dataset)
 
