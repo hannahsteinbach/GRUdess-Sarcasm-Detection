@@ -727,6 +727,7 @@ def tweet_length(dataset):
 
     return dataset
 
+
 def all_caps_counts(dataset):
     """
     Function that counts how many words in a tweet are written in all caps and how many 
@@ -744,17 +745,21 @@ def all_caps_counts(dataset):
     """
     for tweet in dataset:
 
-        firstCaps = 0
-        allCaps = 0
+        firstCaps = []
+        allCaps = []
         
         for word in range(len(tweet["tweetTokenized"])-1):
 
             #if token is a word (we should be careful: assumption that all words only contain letters)
             if word.isalpha():
                 if word[0].isupper():
-                    firstCaps += 1
+                    firstCaps.append(1)
+                else:
+                    firstCaps.append(0)
                 if word.isupper():
-                    allCaps += 1
+                    allCaps.append(1)
+                else:
+                    allCaps.append(0)
         
         # add more features to the dataset wheeee
         tweet["initCapsCount"] = firstCaps
@@ -763,7 +768,7 @@ def all_caps_counts(dataset):
     return dataset
 
 
-def same_vowel_freq(dataset):
+def same_vowel_count(dataset):
     """
     Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating vowels.
 
@@ -777,19 +782,22 @@ def same_vowel_freq(dataset):
     """
 
     for tweet in dataset:
-        repeating_vowels_words = 0
+        repeating_vowels_words = []
 
         for word in tweet["tweetTokenized"]:
     
             if re.search(r'([aeiouAEIOU])\1{2,}', word, flags=re.IGNORECASE):
-                repeating_vowels_words += 1
+                repeating_vowels_words.append(1)
+            else:
+                repeating_vowels_words.append(0)
         
-        tweet["repeatingVowelsWords"] = [repeating_vowels_words]
+        
+        tweet["repeatingVowelsWords"] = repeating_vowels_words
 
     return dataset
 
 
-def same_letter_freq(dataset):
+def same_letter_count(dataset):
     """
     Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating letters.
 
@@ -803,14 +811,16 @@ def same_letter_freq(dataset):
     """
 
     for tweet in dataset:
-        repeating_letters_words = 0
+        repeating_letters_words = []
 
         for word in tweet["tweetTokenized"]:
     
             if re.search(r'(\w)\1{2,}', word, flags=re.IGNORECASE):
-                repeating_letters_words += 1
+                repeating_letters_words.append(1)
+            else:
+                repeating_letters_words.append(0)
         
-        tweet["repeatingLettersWords"] = [repeating_letters_words]
+        tweet["repeatingLettersWords"] = repeating_letters_words
 
     return dataset
 
@@ -818,8 +828,8 @@ dataset = uni_and_bigrams(dataset)
 dataset = tweet_length_tokenized(dataset)
 dataset = tweet_length(dataset)
 dataset = all_caps_counts(dataset)
-dataset = same_vowel_freq(dataset)
-dataset = same_letter_freq(dataset)
+dataset = same_vowel_count(dataset)
+dataset = same_letter_count(dataset)
 print(dataset)
 
 """ - don't delete yet, still needed script in there 
