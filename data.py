@@ -650,10 +650,12 @@ def uni_and_bigrams(dataset):
     Function to create unigrams and bigrams.
 
     Input:
-    dataset (list)  :   List of dictionaries containing tokenized tweets.
+    1. dataset (list)  :   A list of dictionaries.
+                            The dictionary key "tweetTokenized" contains the
+                            information need to create unigram and bigram sets.
 
     Output:
-    dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
+    1. dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
     """
 
     unigrams = set()
@@ -667,18 +669,157 @@ def uni_and_bigrams(dataset):
         unigrams.update(unigram)
 
         # bigrams are consecutive tokens separated by a whitespace
-        bigrams = [unigram[i] + "_" + unigram[i+1] for i in range(len(unigram)-1)]
-        bigrams.update(bigrams)
+        bigram = [unigram[i] + "_" + unigram[i+1] for i in range(len(unigram)-1)]
+        bigrams.update(bigram)
 
     # we use binary indicators for unigrams and bigrams (to check whether they are present in a tweet or not)
     for tweet in dataset:
-        tweet["unigramsIndicators"] = [1 if unigram in unigrams else 0 for token in unigram]
-        tweet["bigramIndicators"] = [1 if bigram in bigrams else 0 for bigram in bigrams]
+        if unigram in unigrams:
+            tweet["unigramsIndicators"] = 1
+        else:
+            tweet["unigramsIndicators"] = 0
+        if bigram in bigrams:
+            tweet["bigramIndicators"] = 1
+        else:
+            tweet["bigramIndicators"] = 0
+    return dataset
+
+
+def tweet_length_tokenized(dataset):
+    """
+    Function to add tweet length as a feature.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            The dictionary key "tweetTokenized" contains the
+                            text to be "measured".
+
+    Output:
+    1. dataset (list)   :   The input dataset with an additional (one item)
+                            feature vector representing tweet length 
+                            concatenated at the end.
+    """
+
+    for tweet in dataset:
+        tweet["tweetTokenizedLength"] = [len(tweet["tweetTokenized"])]
 
     return dataset
 
 
+def tweet_length(dataset):
+    """
+    Function to add tweet length as a feature.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            This version measures the nontokenized tweet. 
+                            The dictionary key "tweetText" contains the
+                            text to be "measured".
+
+    Output:
+    1. dataset (list)   :   The input dataset with an additional (one item)
+                            vector representing tweet length 
+                            concatenated at the end.
+    """
+
+    for tweet in dataset:
+        tweet["tweetLength"] = [len(tweet["tweetText"][0])]
+
+    return dataset
+
+def all_caps_counts(dataset):
+    """
+    Function that counts how many words in a tweet are written in all caps and how many 
+    have initial caps.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            The dictionary key "tweetTokenized" contains the
+                            text to be used.
+
+    Output:
+    1. dataset (list)   :   The input dataset with an additional vector representing 
+                            the number of words written with initial caps and all caps
+                            in each tweet.
+    """
+    for tweet in dataset:
+
+        firstCaps = 0
+        allCaps = 0
+        
+        for word in range(len(tweet["tweetTokenized"])-1):
+
+            #if token is a word (we should be careful: assumption that all words only contain letters)
+            if word.isalpha():
+                if word[0].isupper():
+                    firstCaps += 1
+                if word.isupper():
+                    allCaps += 1
+        
+        # add more features to the dataset wheeee
+        tweet["initCapsCount"] = firstCaps
+        tweet["allCapsCount"] = allCaps
+    
+    return dataset
+
+
+def same_vowel_freq(dataset):
+    """
+    Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating vowels.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            The dictionary key "tweetTokenized" contains the text to be used.
+
+    Output:
+    1. dataset (list)   :   The input dataset with the additional an additional keys:
+                                "repeatingVowelsWords"     :   number of words with more than 2 consecutive vowels in each tweet
+    """
+
+    for tweet in dataset:
+        repeating_vowels_words = 0
+
+        for word in tweet["tweetTokenized"]:
+    
+            if re.search(r'([aeiouAEIOU])\1{2,}', word, flags=re.IGNORECASE):
+                repeating_vowels_words += 1
+        
+        tweet["repeatingVowelsWords"] = [repeating_vowels_words]
+
+    return dataset
+
+
+def same_letter_freq(dataset):
+    """
+    Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating letters.
+
+    Input:
+    1. dataset (list)   :   A list of dictionaries.
+                            The dictionary key "tweetTokenized" contains the text to be used.
+
+    Output:
+    1. dataset (list)   :   The input dataset with the additional an additional keys:
+                                "repeatingLettersWords"     :   number of words with more than 2 consecutive letters in each tweet
+    """
+
+    for tweet in dataset:
+        repeating_letters_words = 0
+
+        for word in tweet["tweetTokenized"]:
+    
+            if re.search(r'(\w)\1{2,}', word, flags=re.IGNORECASE):
+                repeating_letters_words += 1
+        
+        tweet["repeatingLettersWords"] = [repeating_letters_words]
+
+    return dataset
+
 dataset = uni_and_bigrams(dataset)
+dataset = tweet_length_tokenized(dataset)
+dataset = tweet_length(dataset)
+dataset = all_caps_counts(dataset)
+dataset = same_vowel_freq(dataset)
+dataset = same_letter_freq(dataset)
 print(dataset)
 
 """ - don't delete yet, still needed script in there 
