@@ -2,6 +2,7 @@ import csv
 import html
 import random
 import re
+import json
 
 DATA_PATH_OG = './data/train.En__1_.csv'
 DATA_PATH_extended = './data/extended_dataset.txt'
@@ -167,6 +168,13 @@ class TweetDataset:
             tweet["tweetText"] = sarcasm_pattern.sub('', tweet["tweetText"])
 
 
+    def dataset_to_jsonlines(self, dataset, outputFile):
+        with open(outputFile, 'w', encoding='utf-8') as jsonlinesfile:
+            for tweet in dataset:
+                data = {'text': tweet["tweetText"]}
+                jsonline = json.dumps(data, ensure_ascii=False) + '\n'
+                jsonlinesfile.write(jsonline)
+
 # Create an instance of the TweetDataset class
 dataset = TweetDataset()
 
@@ -192,3 +200,7 @@ OG_dataset = dataset.OG_dataset
 balanced_dataset = dataset.balanced_dataset
 unbalanced_dataset = dataset.unbalanced_dataset
 
+# save datasets to jsonlines for POS tagging
+dataset.dataset_to_jsonlines(OG_dataset,'OG-dataset.jsonl')
+dataset.dataset_to_jsonlines(balanced_dataset,'balanced-dataset.jsonl')
+dataset.dataset_to_jsonlines(unbalanced_dataset,'unbalanced-dataset.jsonl')

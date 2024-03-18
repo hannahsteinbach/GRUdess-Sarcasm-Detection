@@ -13,6 +13,7 @@ from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
 from extended_data import OG_dataset, balanced_dataset, unbalanced_dataset
+import subprocess
 
 analyzer = SentimentIntensityAnalyzer()
 
@@ -64,6 +65,17 @@ def handling_emojis(dataset: list):
 
     return dataset
 
+
+def postagging():
+    commandOG = "./runTagger.sh --output-format conll ./OG-dataset.jsonl > OG-pos.csv"
+    commandBalanced = "./runTagger.sh --output-format conll ./balanced-dataset.jsonl > balanced-pos.csv"
+    commandUnbalanced = "./runTagger.sh --output-format conll ./unbalanced-dataset.jsonl > unbalanced-pos.csv"
+
+    subprocess.Popen(commandOG, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.Popen(commandBalanced, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    subprocess.Popen(commandUnbalanced, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    
+postagging()
 
 def tokenizer(dataset: list):
     """
@@ -459,9 +471,8 @@ def include_word2vec(dataset):
 
     return dataset
 
-
-dataset = handling_emojis(OG_dataset)
-dataset = tokenizer(dataset)
+dataset = tokenizer(OG_dataset)
+dataset = handling_emojis(dataset)
 dataset = handling_emoticons(dataset)
 dataset = include_word2vec(dataset)
 
