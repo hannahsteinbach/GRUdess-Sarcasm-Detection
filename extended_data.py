@@ -167,7 +167,7 @@ class TweetDataset:
             tweet["tweetText"] = RT_pattern.sub('', tweet["tweetText"])
             tweet["tweetText"] = sarcasm_pattern.sub('', tweet["tweetText"])
 
-
+    # convert dataset to jsonlines for POS tagging
     def dataset_to_jsonlines(self, dataset, outputFile):
         with open(outputFile, 'w', encoding='utf-8') as jsonlinesfile:
             for tweet in dataset:
@@ -200,7 +200,7 @@ OG_dataset = dataset.OG_dataset
 balanced_dataset = dataset.balanced_dataset
 unbalanced_dataset = dataset.unbalanced_dataset
 
-# save datasets to jsonlines for POS tagging
+# saving datasets to jsonlines
 dataset.dataset_to_jsonlines(OG_dataset,'OG-dataset.jsonl')
 dataset.dataset_to_jsonlines(balanced_dataset,'balanced-dataset.jsonl')
 dataset.dataset_to_jsonlines(unbalanced_dataset,'unbalanced-dataset.jsonl')
