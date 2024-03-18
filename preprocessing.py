@@ -114,7 +114,7 @@ def handling_emoticons(dataset: list):
     # slightly modified dict of emoticons by
     # https://github.com/NeelShah18/emot/blob/master/emot/emo_unicode.py
     # Modification: removed "or smiley" terms
-    # added :p, :s, ¯\\_(ツ)_/¯
+    # added :p, :s, ¯\\_(ツ)_/¯, xP
 
     # dictionary of emoticons
     EMOTICONS_EMO = {
