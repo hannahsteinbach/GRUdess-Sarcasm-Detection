@@ -1,11 +1,9 @@
 from tqdm import tqdm
-import csv
 from somajo import SoMaJo
 from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
-import html
 import gensim
 from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
@@ -188,6 +186,7 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
+        
     ########### PRE-PROCESSING FOR GRU ###########
 
     def create_vocabulary(self):
@@ -268,6 +267,7 @@ class Preprocessing:
             # store range between positive and negative sentiment
             tweet["polarity"] = abs(abs(tweet["Sentiment"]["pos"]) - abs(tweet["Sentiment"]["neg"]))
 
+
     def uni_and_bigrams(self):
         """
         Function to create unigrams and bigrams.
@@ -322,6 +322,7 @@ class Preprocessing:
             # update bigram vector for each tweet
             tweet["bigramIndicators"] = bigramsIndicators
 
+
     def tweet_length_tokenized(self):
         """
         Function to add tweet length as a feature.
@@ -339,6 +340,7 @@ class Preprocessing:
 
         for tweet in self.dataset:
             tweet["tweetTokenizedLength"] = [len(tweet["tweetTokenized"])]
+
 
     def caps_counts(self):
         """
@@ -373,7 +375,7 @@ class Preprocessing:
                     if word.isupper():
                         if word != "I" and word != "XD":
                             allCaps += 1
-                for character in word: #exclude first character, if we do not want that, just word
+                for character in word[1:]: #exclude first character, if we do not want that, just word
                     if character.isalpha() and character.isupper():
                         letterCaps += 1
 
@@ -388,6 +390,7 @@ class Preprocessing:
                 tweet["letterCapsCount"] = letterCaps / totalLetters
             else:
                 tweet["letterCapsCount"] = 0
+
 
     def same_letter_count(self):
         """
@@ -418,6 +421,7 @@ class Preprocessing:
                     repeating_letters_words.append(0)
 
             tweet["repeatingLettersWords"] = repeating_letters_words
+
 
     def include_word2vec(self):
         """
@@ -464,6 +468,7 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
+
 
     def question_mark_count(self):
         """
