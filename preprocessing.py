@@ -1,21 +1,18 @@
 from tqdm import tqdm
-import csv
-# from nltk.tokenize import word_tokenize
 from somajo import SoMaJo
 from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
-import html
 import gensim
 from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
 from extended_data import OG_dataset, balanced_dataset, unbalanced_dataset
-import subprocess
 
 analyzer = SentimentIntensityAnalyzer()
+
 
 def handling_emojis(dataset: list):
     """
@@ -65,17 +62,6 @@ def handling_emojis(dataset: list):
 
     return dataset
 
-
-def postagging():
-    commandOG = "./runTagger.sh --output-format conll ./OG-dataset.jsonl > OG-pos.csv"
-    commandBalanced = "./runTagger.sh --output-format conll ./balanced-dataset.jsonl > balanced-pos.csv"
-    commandUnbalanced = "./runTagger.sh --output-format conll ./unbalanced-dataset.jsonl > unbalanced-pos.csv"
-
-    subprocess.Popen(commandOG, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    subprocess.Popen(commandBalanced, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    subprocess.Popen(commandUnbalanced, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    
-postagging()
 
 def tokenizer(dataset: list):
     """
@@ -476,7 +462,6 @@ dataset = handling_emojis(dataset)
 dataset = handling_emoticons(dataset)
 dataset = include_word2vec(dataset)
 
-
 ########### PRE-PROCESSING FOR GRU ###########
 
 def vocabulary(dataset):
@@ -484,7 +469,7 @@ def vocabulary(dataset):
         Function which creates the vocabulary for our data
 
         Output:
-        dataset with 1 new key vocabularyDeescriptions, based on tokenized tweet
+        dataset with 1 new key "vocabularyDescriptions", based on tokenized tweet
 
         INFORMATION:
             DISCUSS WHICH ONE - WITH EMOJIS OR WITH DESCRIPTIONS? IN GENERAL FOR
@@ -493,7 +478,7 @@ def vocabulary(dataset):
     """
 
     total_iterations = len(dataset)
-    progressBar = tqdm(total=total_iterations, desc="Word Embeddings")
+    progressBar = tqdm(total=total_iterations, desc="Vocabulary")
 
     vocabulary_set = set()
 
@@ -582,33 +567,51 @@ def uni_and_bigrams(dataset):
     1. dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
     """
 
-    unigrams = set()
+    # set of all unigrams is equivalent to vocabulary
+    unigrams = vocabulary(dataset)
     bigrams = set()
 
+    # create set of all bigrams
     for tweet in dataset:
-        unigram = tweet["tweetTokenized"]
-
-        # unigrams are really just individual tokens
-        unigrams.update(unigram)
-
+        tokenizedTweet = tweet["tweetTokenized"]
+        
         # bigrams are consecutive tokens separated by a whitespace
-        bigram = [unigram[i] + "_" + unigram[i + 1] for i in range(len(unigram) - 1)]
+        bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
         bigrams.update(bigram)
 
     # we use binary indicators for unigrams and bigrams (to check whether they are present in a tweet or not)
     for tweet in dataset:
-        if unigram in unigrams:
-            tweet["unigramsIndicators"] = 1
-        else:
-            tweet["unigramsIndicators"] = 0
-        if bigram in bigrams:
-            tweet["bigramIndicators"] = 1
-        else:
-            tweet["bigramIndicators"] = 0
+        tokenizedTweet = tweet["tweetTokenized"]
+        bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
+        
+        # create one-hot encoded unigram vector for each tweet
+        unigramsIndicators = []
+
+        for unigram in unigrams:
+            if unigram in tokenizedTweet:
+                unigramsIndicators.append(1)
+            else:
+                unigramsIndicators.append(0)
+        
+        # update unigram vector for each tweet
+        tweet["unigramIndicators"] = unigramsIndicators
+
+        # create one-hot encoded bigram vector for each tweet
+        bigramsIndicators = []
+
+        for bigram in bigrams:
+            if bigram in tweet["tweetText"]:
+                bigramsIndicators.append(1)
+            else:
+                bigramsIndicators.append(0)
+        
+        # update bigram vector for each tweet
+        tweet["bigramIndicators"] = bigramsIndicators
+
     return dataset
 
 
-def tweet_length_tokenized(dataset):
+def tweet_length(dataset):
     """
     Function to add tweet length as a feature.
 
@@ -704,7 +707,7 @@ def same_letter_count(dataset):
 
 
 dataset = uni_and_bigrams(dataset)
-dataset = tweet_length_tokenized(dataset)
+dataset = tweet_length(dataset)
 dataset = all_caps_counts(dataset)
 dataset = same_letter_count(dataset)
 print(dataset[5000:6000])
