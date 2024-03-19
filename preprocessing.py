@@ -208,11 +208,11 @@ def handling_emoticons(dataset: list):
         u":‑/": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u":/": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u":-[.]": "Skeptical, annoyed, undecided, uneasy or hesitant",
-        u">:[(\)]": "Skeptical, annoyed, undecided, uneasy or hesitant",
+        u">:[(\\)]": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u">:/": "Skeptical, annoyed, undecided, uneasy or hesitant",
-        u":[(\)]": "Skeptical, annoyed, undecided, uneasy or hesitant",
+        u":[(\\)]": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u"=/": "Skeptical, annoyed, undecided, uneasy or hesitant",
-        u"=[(\)]": "Skeptical, annoyed, undecided, uneasy or hesitant",
+        u"=[(\\)]": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u":L": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u"=L": "Skeptical, annoyed, undecided, uneasy or hesitant",
         u":S": "Skeptical, annoyed, undecided, uneasy or hesitant",
@@ -613,7 +613,7 @@ def uni_and_bigrams(dataset):
 
 def tweet_length(dataset):
     """
-    Function to add tweet length as a feature.
+    Function to add tweet length as a feature. Counts the total number of tokens.
 
     Input:
     1. dataset (list)   :   A list of dictionaries.
@@ -627,7 +627,7 @@ def tweet_length(dataset):
     """
 
     for tweet in dataset:
-        tweet["tweetTokenizedLength"] = [len(tweet["tweetTokenized"])]
+        tweet["tweetLength"] = [len(tweet["tweetTokenized"])]
 
     return dataset
 
@@ -706,11 +706,108 @@ def same_letter_count(dataset):
     return dataset
 
 
+def question_mark_count(dataset):
+    """
+    Function to add a feature representing the number of question marks in each tweet.
+
+    Input:
+    dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+    Output:
+    dataset (list)  :   The input dataset with an additional 'questionMarkCount' feature.
+    """
+    # by characters:
+    for tweet in dataset:
+        questionCount = tweet["tweetText"].count('?')
+        totalChars = len(tweet["tweetText"])
+        if totalChars > 0:
+            normalized = questionCount / totalChars
+        else:
+            normalized = 0
+        tweet["questionMarkCount"] = normalized
+
+    return dataset
+
+
+def exclamation_mark_count(dataset):
+    """
+    Function to add a feature representing the number of exclamation marks in each tweet.
+
+    Input:
+    dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+    Output:
+    dataset (list)  :   The input dataset with an additional 'exclamationMarkCount' feature.
+    """
+    # by characters:
+    for tweet in dataset:
+        exclamationCount = tweet["tweetText"].count('!')
+        totalChars = len(tweet["tweetText"])
+        if totalChars > 0:
+            normalized = exclamationCount / totalChars
+        else:
+            normalized = 0
+        tweet["exclamationMarkCount"] = normalized
+
+    return dataset
+
+
+def period_count(dataset):
+    """
+    Function to add a feature representing the number of periods in each tweet.
+
+    Input:
+    dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+    Output:
+    dataset (list)  :   The input dataset with an additional 'periodCount' feature.
+    """
+    # by characters:
+    for tweet in dataset:
+        periodCount = tweet["tweetText"].count('.')
+        totalChars = len(tweet["tweetText"])
+        if totalChars > 0:
+            normalized = periodCount / totalChars
+        else:
+            normalized = 0
+        tweet["periodCount"] = normalized
+
+    return dataset
+
+
+def ats_count(dataset):
+    """
+    Function to add a feature representing the number of user mentions in each tweet.
+
+    Input:
+    dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+    Output:
+    dataset (list)  :   The input dataset with an additional 'taggedCount' feature.
+    """
+    # by characters:
+    for tweet in dataset:
+        tweetText = tweet["tweetText"]
+        atsCount = len(re.findall(r'@\w+', tweetText))
+        totalChars = len(tweet["tweetText"])
+        print(atsCount)
+        if totalChars > 0:
+            normalized = atsCount / totalChars
+        else:
+            normalized = 0
+        tweet["taggedCount"] = normalized
+
+    return dataset
+
 dataset = uni_and_bigrams(dataset)
 dataset = tweet_length(dataset)
 dataset = all_caps_counts(dataset)
 dataset = same_letter_count(dataset)
-print(dataset[5000:6000])
+dataset = question_mark_count(dataset)
+dataset = exclamation_mark_count(dataset)
+dataset = period_count(dataset)
+dataset = ats_count(dataset)
+print(dataset[2000:2500])
 
 """ - don't delete yet, still needed script in there 
 def load_dataset(filename: str):
