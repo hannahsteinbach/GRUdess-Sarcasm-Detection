@@ -1,9 +1,11 @@
 from tqdm import tqdm
+import csv
 from somajo import SoMaJo
 from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
+import html
 import gensim
 from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
@@ -186,7 +188,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-        
     ########### PRE-PROCESSING FOR GRU ###########
 
     def create_vocabulary(self):
@@ -267,7 +268,6 @@ class Preprocessing:
             # store range between positive and negative sentiment
             tweet["polarity"] = abs(abs(tweet["Sentiment"]["pos"]) - abs(tweet["Sentiment"]["neg"]))
 
-
     def uni_and_bigrams(self):
         """
         Function to create unigrams and bigrams.
@@ -322,7 +322,6 @@ class Preprocessing:
             # update bigram vector for each tweet
             tweet["bigramIndicators"] = bigramsIndicators
 
-
     def tweet_length_tokenized(self):
         """
         Function to add tweet length as a feature.
@@ -340,7 +339,6 @@ class Preprocessing:
 
         for tweet in self.dataset:
             tweet["tweetTokenizedLength"] = [len(tweet["tweetTokenized"])]
-
 
     def caps_counts(self):
         """
@@ -375,7 +373,7 @@ class Preprocessing:
                     if word.isupper():
                         if word != "I" and word != "XD":
                             allCaps += 1
-                for character in word[1:]: #exclude first character, if we do not want that, just word
+                for character in word: #exclude first character, if we do not want that, just word
                     if character.isalpha() and character.isupper():
                         letterCaps += 1
 
@@ -391,7 +389,6 @@ class Preprocessing:
             else:
                 tweet["letterCapsCount"] = 0
 
-
     def same_letter_count(self):
         """
         Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating letters.
@@ -404,24 +401,23 @@ class Preprocessing:
         1. dataset (list)   :   The input dataset with the additional an additional key:
 
                                 "repeatingLettersWords":
-                                One-hot-encoded vector (tokens with more than 2 consecutive letters are represented
-                                as 1, everything else as 0)
+                                Frequency of words that contain repeating letters (more than 2), normalized by
+                                total number of words.
         """
-
         for tweet in self.dataset:
-            repeating_letters_words = []
+            repeating_letters_words = 0
+            words_count = 0
 
             for word in tweet["tweetTokenized"]:
                 if word.isalpha():
+                    words_count += 1
                     if re.search(r'(\w)\1{2,}', word, flags=re.IGNORECASE):
-                        repeating_letters_words.append(1)
-                    else:
-                        repeating_letters_words.append(0)
-                else:
-                    repeating_letters_words.append(0)
+                        repeating_letters_words += 1
 
-            tweet["repeatingLettersWords"] = repeating_letters_words
-
+            if words_count > 0:
+                tweet["repeatingLettersWords"] = repeating_letters_words/words_count
+            else:
+                tweet["repeatingLettersWords"] = 0
 
     def include_word2vec(self):
         """
@@ -468,7 +464,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-
 
     def question_mark_count(self):
         """
@@ -532,6 +527,24 @@ class Preprocessing:
                 normalized = 0
             tweet["periodCount"] = normalized
 
+    def find_consecutive_punctuation(self):
+        """
+        Function to find consecutive punctuation in one tweet.
+
+        Input:
+        dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+        Output:
+        dataset (list)  :   The input dataset with an additional 'consecutivePunctuation' feature. For each tweet
+                            the value is either 0 (no consecutive punctuation) or 1 (consecutive punctuation present).
+        """
+        # by characters:
+        for tweet in self.dataset:
+            consecutive_punctuation = 0
+            if re.search(r'[.?!]{2,}', tweet["tweetText"]):
+                consecutive_punctuation += 1
+            tweet["consecutivePunctuation"] = consecutive_punctuation
+
 
     def ats_count(self):
         """
@@ -558,21 +571,22 @@ class Preprocessing:
 # Example usage:
 preprocessed_tweet = Preprocessing(OG_dataset)
 preprocessed_tweet.tokenizer()
-preprocessed_tweet.handling_emojis()
-preprocessed_tweet.handling_emoticons()
-preprocessed_tweet.sentiment()
-preprocessed_tweet.create_vocabulary()
-preprocessed_tweet.uni_and_bigrams()
-preprocessed_tweet.pos_tagging()
-preprocessed_tweet.tweet_length_tokenized()
-preprocessed_tweet.caps_counts()
+#preprocessed_tweet.handling_emojis()
+#preprocessed_tweet.handling_emoticons()
+#preprocessed_tweet.sentiment()
+#preprocessed_tweet.create_vocabulary()
+#preprocessed_tweet.uni_and_bigrams()
+#preprocessed_tweet.pos_tagging()
+#preprocessed_tweet.tweet_length_tokenized()
+#preprocessed_tweet.caps_counts()
 preprocessed_tweet.same_letter_count()
+preprocessed_tweet.ats_count()
+preprocessed_tweet.exclamation_mark_count()
+preprocessed_tweet.question_mark_count()
+preprocessed_tweet.period_count()
+preprocessed_tweet.find_consecutive_punctuation()
 #preprocessed_tweet.include_word2vec() -
+
 
 da = preprocessed_tweet.dataset
 print(da)
-
-
-
-
-
