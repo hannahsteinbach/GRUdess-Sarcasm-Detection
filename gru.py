@@ -16,7 +16,7 @@ Let's talk about the input
 """
 
 
-def padd_inputs(preprocessed_input):
+def pad_inputs(preprocessed_input):
     """
         Function which padds our input data to the same lenght 
 
@@ -60,6 +60,6 @@ class RNN_GRU(nn.Module):
         out = self.fc(out[:, -1, :])
         
         out = self.softmax(out) 
-        return out
+        return out   
 
 
