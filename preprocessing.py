@@ -790,7 +790,6 @@ def ats_count(dataset):
         tweetText = tweet["tweetText"]
         atsCount = len(re.findall(r'@\w+', tweetText))
         totalChars = len(tweet["tweetText"])
-        print(atsCount)
         if totalChars > 0:
             normalized = atsCount / totalChars
         else:
