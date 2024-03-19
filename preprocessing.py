@@ -465,6 +465,90 @@ class Preprocessing:
 
         progressBar.close()
 
+    def question_mark_count(self):
+        """
+        Function to add a feature representing the number of question marks in each tweet.
+
+        Input:
+        dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+        Output:
+        dataset (list)  :   The input dataset with an additional 'questionMarkCount' feature.
+        """
+        # by characters:
+        for tweet in self.dataset:
+            questionCount = tweet["tweetText"].count('?')
+            totalChars = len(tweet["tweetText"])
+            if totalChars > 0:
+                normalized = questionCount / totalChars
+            else:
+                normalized = 0
+            tweet["questionMarkCount"] = normalized
+
+
+    def exclamation_mark_count(self):
+        """
+        Function to add a feature representing the number of exclamation marks in each tweet.
+
+        Input:
+        dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+        Output:
+        dataset (list)  :   The input dataset with an additional 'exclamationMarkCount' feature.
+        """
+        # by characters:
+        for tweet in self.dataset:
+            exclamationCount = tweet["tweetText"].count('!')
+            totalChars = len(tweet["tweetText"])
+            if totalChars > 0:
+                normalized = exclamationCount / totalChars
+            else:
+                normalized = 0
+            tweet["exclamationMarkCount"] = normalized
+
+
+    def period_count(self):
+        """
+        Function to add a feature representing the number of periods in each tweet.
+
+        Input:
+        dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+        Output:
+        dataset (list)  :   The input dataset with an additional 'periodCount' feature.
+        """
+        # by characters:
+        for tweet in self.dataset:
+            periodCount = tweet["tweetText"].count('.')
+            totalChars = len(tweet["tweetText"])
+            if totalChars > 0:
+                normalized = periodCount / totalChars
+            else:
+                normalized = 0
+            tweet["periodCount"] = normalized
+
+
+    def ats_count(self):
+        """
+        Function to add a feature representing the number of user mentions in each tweet.
+
+        Input:
+        dataset (list)  :   A list of dictionaries where each dictionary represents a tweet.
+
+        Output:
+        dataset (list)  :   The input dataset with an additional 'taggedCount' feature.
+        """
+        # by characters:
+        for tweet in self.dataset:
+            tweetText = tweet["tweetText"]
+            atsCount = len(re.findall(r'@\w+', tweetText))
+            totalChars = len(tweet["tweetText"])
+            if totalChars > 0:
+                normalized = atsCount / totalChars
+            else:
+                normalized = 0
+            tweet["taggedCount"] = normalized
+
 
 # Example usage:
 preprocessed_tweet = Preprocessing(OG_dataset)
