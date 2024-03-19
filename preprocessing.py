@@ -373,7 +373,7 @@ class Preprocessing:
                     if word.isupper():
                         if word != "I" and word != "XD":
                             allCaps += 1
-                for character in word[1:]: #exclude first character, if we do not want that, just word
+                for character in word: #exclude first character, if we do not want that, just word
                     if character.isalpha() and character.isupper():
                         letterCaps += 1
 
