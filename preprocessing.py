@@ -6,9 +6,12 @@ from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
 import html
+import gensim
+from gensim.models import word2vec
+from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
-from extended_data2 import OG_dataset, balanced_dataset, unbalanced_dataset, emoticons_dic
+from extended_data import OG_dataset, balanced_dataset, unbalanced_dataset, emoticons_dic
 
 class Preprocessing:
     def __init__(self, dataset):
