@@ -257,43 +257,8 @@ with torch.no_grad(): # look what this is/does
 
     acc = 100.0 * n_correct / n_samples
 
+    return acc
+
     
 
 
-######################################################################################
-class RNN_GRU(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes, bidirectional=True):
-        super(RNN_GRU, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-        self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)   # GRU
-        self.fc = nn.Linear(hidden_size, num_classes)  
-        self.softmax = nn.LogSoftmax(dim=1)
-        # make it bidirectional
-        self.bidirectional = bidirectional
-        
-
-    def forward(self, x):
-        # Set initial hidden and cell states - GRU
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) 
-        
-        # Forward propagate RNN
-        out, _ = self.gru(x, h0)
-        
-        # Decode the hidden state of the last time step
-        out = self.fc(out[:, -1, :])
-        
-        out = self.softmax(out) 
-        return out
-
-
-#################### TRAINING THE NETWORK ####################
-    
-# optimization method
-# Learn on plateau
-# early stopping - as soon as the model stops improving/gets better it stops
-    # Jorge has a function for this he'll provide Raluca 
-# track losses over all epochs and note them down (with wandb?)
-    
-# initiate the model
-model = RNN_GRU(input_size, hidden_size, num_layers, num_classes) 
