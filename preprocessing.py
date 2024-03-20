@@ -649,7 +649,7 @@ class Preprocessing:
 
 
 # Example usage:
-preprocessed_tweet = Preprocessing(testset)
+preprocessed_tweet = Preprocessing(OG_dataset)
 preprocessed_tweet.tokenizer()
 preprocessed_tweet.handling_emojis()
 preprocessed_tweet.handling_emoticons()
