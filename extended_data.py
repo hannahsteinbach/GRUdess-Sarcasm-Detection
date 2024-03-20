@@ -2,13 +2,16 @@ import csv
 import html
 import random
 import re
+import json
 
 DATA_PATH_OG = './data/train.En__1_.csv'
 DATA_PATH_extended = './data/extended_dataset.txt'
+DATA_PATH_testset = './data/task_A_En_test__1_.csv'
 
 class TweetDataset:
     def __init__(self):
         self.OG_dataset = []
+        self.testset = []
         self.extension = []
         self.balanced_dataset = []
         self.unbalanced_dataset = []
@@ -39,14 +42,12 @@ class TweetDataset:
             for row in data:
                 decoded_row = [html.unescape(cell) for cell in row]
                 tweet_dict = {
-                    "tweetID": decoded_row[0],
                     "tweetText": decoded_row[1],
                     "class": int(decoded_row[2])
                 }
                 self.OG_dataset.append(tweet_dict)
                 if tweet_dict["class"] == 1:
                     rephrase_dict = {
-                        "tweetID": decoded_row[0],
                         "tweetText": decoded_row[3],
                         "class": 0
                     }
@@ -80,6 +81,35 @@ class TweetDataset:
                     "class": int(decoded_row[1])
                 }
                 self.extension.append(tweet_dict)
+
+    def load_test_dataset(self, filename):
+        """
+        Function that reads the test dataset, converts HTML encoded text to plain text,
+        and saves information about a tweet within a dictionary. It is the same as load_dataset, but with minor changes,
+        i.e., we do not have a text ID and the enumeration of tweet text and class is different, there are no rephrases
+        of the sarcastic tweets. This function fills self.extension.
+
+        Input:
+        1. filename (str)   :   Name of the file that is supposed to be read in.
+
+        Output:
+        1. dataset (list)   :   List of dictionaries where each element is a
+                                Tweet from the given dataset. Each dictionary has
+                                the following keys:
+                                    tweetText   :   text of the tweet formatted as a string
+                                    class       :   classification of the tweet as
+                                                        non-sarcastic (0) or sarcastic (1)
+            """
+        with open(filename, "r", encoding="UTF8") as f:
+            data = csv.reader(f, delimiter=",")
+            next(data)  # Skip header
+            for row in data:
+                decoded_row = [html.unescape(cell) for cell in row]
+                tweet_dict = {
+                    "tweetText": decoded_row[0],
+                    "class": int(decoded_row[1])
+                }
+                self.testset.append(tweet_dict)
 
     def create_balanced_dataset(self):
         """
@@ -166,11 +196,20 @@ class TweetDataset:
             tweet["tweetText"] = RT_pattern.sub('', tweet["tweetText"])
             tweet["tweetText"] = sarcasm_pattern.sub('', tweet["tweetText"])
 
+    # convert dataset to jsonlines for POS tagging
+    def dataset_to_jsonlines(self, dataset, outputFile):
+        with open(outputFile, 'w', encoding='utf-8') as jsonlinesfile:
+            for tweet in dataset:
+                data = {'text': tweet["tweetText"]}
+                jsonline = json.dumps(data, ensure_ascii=False) + '\n'
+                jsonlinesfile.write(jsonline)
+
 
 # Create an instance of the TweetDataset class
 dataset = TweetDataset()
 
-# Load the original and extended datasets
+# Load the original and extended datasets for training as well as the testset
+dataset.load_test_dataset(DATA_PATH_testset)
 dataset.load_OG_dataset(DATA_PATH_OG)
 dataset.load_extended_dataset(DATA_PATH_extended)
 
@@ -182,6 +221,7 @@ dataset.create_balanced_dataset()
 dataset.clean_urls(dataset.balanced_dataset)
 dataset.clean_urls(dataset.unbalanced_dataset)
 dataset.clean_urls(dataset.OG_dataset)
+dataset.clean_urls(dataset.testset)
 
 # Clean RTs and sarcasm-related patterns
 dataset.clean_rts_sarcasm(dataset.balanced_dataset)
@@ -191,6 +231,7 @@ dataset.clean_rts_sarcasm(dataset.unbalanced_dataset)
 OG_dataset = dataset.OG_dataset
 balanced_dataset = dataset.balanced_dataset
 unbalanced_dataset = dataset.unbalanced_dataset
+testset = dataset.testset
 
 # slightly modified dict of emoticons by
 # https://github.com/NeelShah18/emot/blob/master/emot/emo_unicode.py
