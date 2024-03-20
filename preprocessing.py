@@ -11,7 +11,7 @@ from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
-from extended_data2 import emoticons_dic, OG_dataset, balanced_dataset, unbalanced_dataset, testset
+from extended_data import emoticons_dic, OG_dataset, balanced_dataset, unbalanced_dataset, testset
 import pandas as pd
 
 class Preprocessing:
@@ -625,14 +625,13 @@ class Preprocessing:
 
         progressBar.close()
 
-    def create_feature_matrix(self):
+    def create_feature_array(self):
         '''Creates a feature matrix for the dataset object and fills the self.feature_array attribute.'''
         df = pd.DataFrame(self.dataset)
         features = df.drop(columns=[
             "class",
             "tweetText",
             "tweetTokenized",
-            "tweetWithoutEmojicon",
             "emoticons",
             "emoticons_description",
             "tweetWithoutEmojicon",
@@ -642,7 +641,7 @@ class Preprocessing:
         ])
         self.feature_array = features.values
 
-    def create_classification_matrix(self):
+    def create_classification_array(self):
         '''Creates a classification matrix for the dataset object and fills the self.class_array attribute.'''
         df = pd.DataFrame(self.dataset)
         class_pd = df["class"]
@@ -650,14 +649,14 @@ class Preprocessing:
 
 
 # Example usage:
-preprocessed_tweet = Preprocessing(unbalanced_dataset)
+preprocessed_tweet = Preprocessing(testset)
 preprocessed_tweet.tokenizer()
 preprocessed_tweet.handling_emojis()
 preprocessed_tweet.handling_emoticons()
 preprocessed_tweet.sentiment()
 preprocessed_tweet.create_vocabulary()
 preprocessed_tweet.uni_and_bigrams()
-preprocessed_tweet.pos_tagging()
+#preprocessed_tweet.pos_tagging()
 preprocessed_tweet.tweet_length_tokenized()
 preprocessed_tweet.caps_counts()
 preprocessed_tweet.same_letter_count()
@@ -666,7 +665,8 @@ preprocessed_tweet.exclamation_mark_count()
 preprocessed_tweet.question_mark_count()
 preprocessed_tweet.period_count()
 preprocessed_tweet.find_consecutive_punctuation()
-preprocessed_tweet.create_classification_matrix()
-preprocessed_tweet.create_feature_matrix()
+preprocessed_tweet.create_classification_array()
+preprocessed_tweet.create_feature_array()
 
-print(preprocessed_tweet.dataset)
+class_array = preprocessed_tweet.class_array
+feature_array = preprocessed_tweet.feature_array
