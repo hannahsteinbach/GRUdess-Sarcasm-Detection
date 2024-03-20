@@ -105,7 +105,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def handling_emoticons(self):
         """
         Function that separates and prepares emojis for further processing.
@@ -136,7 +135,7 @@ class Preprocessing:
             tweet["emoticons_description"] = []
             # check for each token if it consists of only alphabetical
             # characters
-            for token in tweet["tweetTokenized"]:
+            for index, token in enumerate(tweet["tweetTokenized"]):
                 check_emoticon = token.isalpha()
 
                 if check_emoticon == False and len(token) >= 2:
@@ -165,6 +164,8 @@ class Preprocessing:
                             # delete emoticon from other entry
                             tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
 
+                            # change POS tag for token
+                            tweet["posTagged_tweet"][index] = (token, "EMOTICON")
                             break
 
                 elif token == "xD" or token == "XD":
@@ -176,6 +177,8 @@ class Preprocessing:
                     # delete emoticon from other entry
                     tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
 
+                    tweet["posTagged_tweet"][index] = (token, "EMOTICON")
+
 
                 elif token == "XP":
                     replacement = "<ec> " + emoticons_dic["xP"] + " </ec>"
@@ -185,6 +188,10 @@ class Preprocessing:
 
                     # delete emoticon from other entry
                     tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
+
+                    tweet["posTagged_tweet"][index] = (token, "EMOTICON")
+
+
             if len(tweet["tweetTokenized"]) != 0:
                 tweet["frequency_emoticons"] = len(tweet["emoticons"]) / len(tweet["tweetTokenized"])
             else:
@@ -192,6 +199,8 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
+    
+    
     ########### PRE-PROCESSING FOR GRU ###########
 
     def create_vocabulary(self):
@@ -232,7 +241,7 @@ class Preprocessing:
         progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
 
         # load model
-        model = "./data/english_newspaper_2017-09-15.model"
+        model = "./english_newspaper_2017-09-15.model"
 
         """
         # example sentences
@@ -240,8 +249,10 @@ class Preprocessing:
                  ["Zeitfliegen", "mögen", "einen", "Pfeil", "."]]
         """
         # create object for pos tagger
+        print("Loading PoS tagger...")
         asptagger = ASPTagger()
         asptagger.load(model)
+        print("Loaded PoS tagger.")
 
         # go through dataset to get tokenized text
         for tweet in self.dataset:
@@ -254,6 +265,15 @@ class Preprocessing:
 
                 # create new dictionary key
                 tweet["posTagged_tweet"] = posTagged_tweet #change this
+
+            for index, token in enumerate(tweet["posTagged_tweet"]):
+                if token[0][0] == "@":
+                    tweet["posTagged_tweet"][index] = (token[0], "@")
+                elif token[0][0] == "#":
+                    tweet["posTagged_tweet"][index] = (token[0], "HASH")
+
+
+
             progressBar.update(1)
 
         progressBar.close()
@@ -524,7 +544,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def exclamation_mark_count(self):
         """
         Function to add a feature representing the number of exclamation marks in each tweet.
@@ -598,7 +617,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def ats_count(self):
         """
         Function to add a feature representing the number of user mentions in each tweet.
@@ -651,22 +669,24 @@ class Preprocessing:
 # Example usage:
 preprocessed_tweet = Preprocessing(OG_dataset)
 preprocessed_tweet.tokenizer()
+preprocessed_tweet.pos_tagging()
 preprocessed_tweet.handling_emojis()
 preprocessed_tweet.handling_emoticons()
-preprocessed_tweet.sentiment()
-preprocessed_tweet.create_vocabulary()
-preprocessed_tweet.uni_and_bigrams()
-#preprocessed_tweet.pos_tagging()
-preprocessed_tweet.tweet_length_tokenized()
-preprocessed_tweet.caps_counts()
-preprocessed_tweet.same_letter_count()
-preprocessed_tweet.ats_count()
-preprocessed_tweet.exclamation_mark_count()
-preprocessed_tweet.question_mark_count()
-preprocessed_tweet.period_count()
-preprocessed_tweet.find_consecutive_punctuation()
-preprocessed_tweet.create_classification_array()
-preprocessed_tweet.create_feature_array()
 
-class_array = preprocessed_tweet.class_array
-feature_array = preprocessed_tweet.feature_array
+# preprocessed_tweet.sentiment()
+# preprocessed_tweet.create_vocabulary()
+# preprocessed_tweet.uni_and_bigrams()
+#preprocessed_tweet.pos_tagging()
+# preprocessed_tweet.tweet_length_tokenized()
+# preprocessed_tweet.caps_counts()
+# preprocessed_tweet.same_letter_count()
+# preprocessed_tweet.ats_count()
+# preprocessed_tweet.exclamation_mark_count()
+# preprocessed_tweet.question_mark_count()
+# preprocessed_tweet.period_count()
+# preprocessed_tweet.find_consecutive_punctuation()
+# preprocessed_tweet.create_classification_array()
+# preprocessed_tweet.create_feature_array()
+
+# class_array = preprocessed_tweet.class_array
+# feature_array = preprocessed_tweet.feature_array
