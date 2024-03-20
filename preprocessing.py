@@ -11,7 +11,8 @@ from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
-from extended_data import OG_dataset, balanced_dataset, unbalanced_dataset, emoticons_dic
+from extended_data2 import emoticons_dic, OG_dataset, balanced_dataset, unbalanced_dataset, testset
+import pandas as pd
 
 class Preprocessing:
     def __init__(self, dataset):
@@ -20,6 +21,9 @@ class Preprocessing:
         self.dataset = dataset
         self.bigrams = set()
         self.embeddings = []
+        self.feature_array = None
+        self.class_array = None
+
 
     def tokenizer(self):
         """
@@ -37,7 +41,7 @@ class Preprocessing:
         """
 
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Tokenizing")
+        progressBar = tqdm(total=total_iterations, desc="Tokenizing...")
 
         # create object for tokenizer
         tokenizer = SoMaJo("en_PTB", split_sentences=False)
@@ -80,7 +84,7 @@ class Preprocessing:
                                                                  by number of tokens in tweet)
         """
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Handling Emojis")
+        progressBar = tqdm(total=total_iterations, desc="Handling Emojis...")
 
         for tweet in self.dataset:
             tweet["tweetWithoutEmojicon"] = emoji.replace_emoji(tweet["tweetText"], replace='')
@@ -124,7 +128,7 @@ class Preprocessing:
                                                                 by number of tokens in tweet)
         """
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Handling Emoticons")
+        progressBar = tqdm(total=total_iterations, desc="Handling Emoticons...")
 
         # go through each tweet
         for tweet in self.dataset:
@@ -204,7 +208,7 @@ class Preprocessing:
         """
 
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Building Vocabulary")
+        progressBar = tqdm(total=total_iterations, desc="Building Vocabulary...")
 
         for tweet in self.dataset:
             for token in tweet["tweetTokenized"]:
@@ -224,6 +228,9 @@ class Preprocessing:
         Output:
         TO BE DETERMINED
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
+
         # load model
         model = "./data/english_newspaper_2017-09-15.model"
 
@@ -247,6 +254,9 @@ class Preprocessing:
 
                 # create new dictionary key
                 tweet["posTagged_tweet"] = posTagged_tweet #change this
+            progressBar.update(1)
+
+        progressBar.close()
 
     def sentiment(self):
         """
@@ -262,11 +272,15 @@ class Preprocessing:
                                  sentiment
         TO BE DETERMINED
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Checking polarity...")
         for tweet in self.dataset:
             scores = self.analyzer.polarity_scores(tweet["tweetWithEmojiconDescription"])
-            tweet["Sentiment"] = scores
             # store range between positive and negative sentiment
-            tweet["polarity"] = abs(abs(tweet["Sentiment"]["pos"]) - abs(tweet["Sentiment"]["neg"]))
+            tweet["polarity"] = abs(abs(scores["pos"]) - abs(scores["neg"]))
+            progressBar.update(1)
+
+        progressBar.close()
 
     def uni_and_bigrams(self):
         """
@@ -281,6 +295,7 @@ class Preprocessing:
         1. dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
         """
         total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Creating unigrams and bigrams...")
 
         # set of all unigrams is equivalent to vocabulary
         unigrams = self.vocabulary
@@ -308,7 +323,7 @@ class Preprocessing:
                     unigramsIndicators.append(0)
 
             # update unigram vector for each tweet
-            tweet["unigramIndicators"] = unigramsIndicators
+            tweet["unigrams "] = unigramsIndicators
 
             # create one-hot encoded bigram vector for each tweet
             bigramsIndicators = []
@@ -320,7 +335,10 @@ class Preprocessing:
                     bigramsIndicators.append(0)
 
             # update bigram vector for each tweet
-            tweet["bigramIndicators"] = bigramsIndicators
+            tweet["bigrams"] = bigramsIndicators
+            progressBar.update(1)
+
+        progressBar.close()
 
     def tweet_length_tokenized(self):
         """
@@ -336,9 +354,13 @@ class Preprocessing:
                                 feature vector representing tweet length
                                 concatenated at the end.
         """
-
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting lengths of tweets...")
         for tweet in self.dataset:
-            tweet["tweetTokenizedLength"] = [len(tweet["tweetTokenized"])]
+            tweet["tweetTokenizedLength"] = len(tweet["tweetTokenized"])
+            progressBar.update(1)
+
+        progressBar.close()
 
     def caps_counts(self):
         """
@@ -356,6 +378,9 @@ class Preprocessing:
                                 in each tweet (normalized by overall number of words), additionally the frequency of
                                 capitalized (non-initial) letters in the tweet (normalized by overall number of letters).
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting initial capitalization, words in all cap "
+                                                        "and capitalized letters...")
         for tweet in self.dataset:
             firstCaps = 0
             allCaps = 0
@@ -376,6 +401,7 @@ class Preprocessing:
                 for character in word: #exclude first character, if we do not want that, just word
                     if character.isalpha() and character.isupper():
                         letterCaps += 1
+                progressBar.update(1)
 
             if totalWords != 0:
                 tweet["initCapsCount"] = firstCaps / totalWords
@@ -388,6 +414,9 @@ class Preprocessing:
                 tweet["letterCapsCount"] = letterCaps / totalLetters
             else:
                 tweet["letterCapsCount"] = 0
+
+
+            progressBar.close()
 
     def same_letter_count(self):
         """
@@ -404,6 +433,8 @@ class Preprocessing:
                                 Frequency of words that contain repeating letters (more than 2), normalized by
                                 total number of words.
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting repeating letters...")
         for tweet in self.dataset:
             repeating_letters_words = 0
             words_count = 0
@@ -418,6 +449,9 @@ class Preprocessing:
                 tweet["repeatingLettersWords"] = repeating_letters_words/words_count
             else:
                 tweet["repeatingLettersWords"] = 0
+            progressBar.update(1)
+
+        progressBar.close()
 
     def include_word2vec(self):
         """
@@ -430,7 +464,7 @@ class Preprocessing:
         """
 
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Word Embeddings")
+        progressBar = tqdm(total=total_iterations, desc="Word Embeddings...")
 
         # load pre-trained model
         wv = api.load("glove-twitter-100")
@@ -475,6 +509,8 @@ class Preprocessing:
         Output:
         dataset (list)  :   The input dataset with an additional 'questionMarkCount' feature.
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting question marks...")
         # by characters:
         for tweet in self.dataset:
             questionCount = tweet["tweetText"].count('?')
@@ -484,6 +520,9 @@ class Preprocessing:
             else:
                 normalized = 0
             tweet["questionMarkCount"] = normalized
+            progressBar.update(1)
+
+        progressBar.close()
 
 
     def exclamation_mark_count(self):
@@ -496,6 +535,8 @@ class Preprocessing:
         Output:
         dataset (list)  :   The input dataset with an additional 'exclamationMarkCount' feature.
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting exclamation marks...")
         # by characters:
         for tweet in self.dataset:
             exclamationCount = tweet["tweetText"].count('!')
@@ -505,7 +546,9 @@ class Preprocessing:
             else:
                 normalized = 0
             tweet["exclamationMarkCount"] = normalized
+            progressBar.update(1)
 
+        progressBar.close()
 
     def period_count(self):
         """
@@ -517,6 +560,8 @@ class Preprocessing:
         Output:
         dataset (list)  :   The input dataset with an additional 'periodCount' feature.
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting periods...")
         # by characters:
         for tweet in self.dataset:
             periodCount = tweet["tweetText"].count('.')
@@ -526,6 +571,9 @@ class Preprocessing:
             else:
                 normalized = 0
             tweet["periodCount"] = normalized
+            progressBar.update(1)
+
+        progressBar.close()
 
     def find_consecutive_punctuation(self):
         """
@@ -538,12 +586,17 @@ class Preprocessing:
         dataset (list)  :   The input dataset with an additional 'consecutivePunctuation' feature. For each tweet
                             the value is either 0 (no consecutive punctuation) or 1 (consecutive punctuation present).
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Finding consecutive punctuation...")
         # by characters:
         for tweet in self.dataset:
             consecutive_punctuation = 0
             if re.search(r'[.?!]{2,}', tweet["tweetText"]):
                 consecutive_punctuation += 1
             tweet["consecutivePunctuation"] = consecutive_punctuation
+            progressBar.update(1)
+
+        progressBar.close()
 
 
     def ats_count(self):
@@ -556,6 +609,8 @@ class Preprocessing:
         Output:
         dataset (list)  :   The input dataset with an additional 'taggedCount' feature.
         """
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Counting @'s...")
         # by characters:
         for tweet in self.dataset:
             tweetText = tweet["tweetText"]
@@ -566,27 +621,52 @@ class Preprocessing:
             else:
                 normalized = 0
             tweet["taggedCount"] = normalized
+            progressBar.update(1)
+
+        progressBar.close()
+
+    def create_feature_matrix(self):
+        '''Creates a feature matrix for the dataset object and fills the self.feature_array attribute.'''
+        df = pd.DataFrame(self.dataset)
+        features = df.drop(columns=[
+            "class",
+            "tweetText",
+            "tweetTokenized",
+            "tweetWithoutEmojicon",
+            "emoticons",
+            "emoticons_description",
+            "tweetWithoutEmojicon",
+            "tweetWithEmojiconDescription",
+            "emojis_description",
+            "emojis"
+        ])
+        self.feature_array = features.values
+
+    def create_classification_matrix(self):
+        '''Creates a classification matrix for the dataset object and fills the self.class_array attribute.'''
+        df = pd.DataFrame(self.dataset)
+        class_pd = df["class"]
+        self.class_array = class_pd.values
 
 
 # Example usage:
-preprocessed_tweet = Preprocessing(OG_dataset)
+preprocessed_tweet = Preprocessing(unbalanced_dataset)
 preprocessed_tweet.tokenizer()
-#preprocessed_tweet.handling_emojis()
-#preprocessed_tweet.handling_emoticons()
-#preprocessed_tweet.sentiment()
-#preprocessed_tweet.create_vocabulary()
-#preprocessed_tweet.uni_and_bigrams()
-#preprocessed_tweet.pos_tagging()
-#preprocessed_tweet.tweet_length_tokenized()
-#preprocessed_tweet.caps_counts()
+preprocessed_tweet.handling_emojis()
+preprocessed_tweet.handling_emoticons()
+preprocessed_tweet.sentiment()
+preprocessed_tweet.create_vocabulary()
+preprocessed_tweet.uni_and_bigrams()
+preprocessed_tweet.pos_tagging()
+preprocessed_tweet.tweet_length_tokenized()
+preprocessed_tweet.caps_counts()
 preprocessed_tweet.same_letter_count()
 preprocessed_tweet.ats_count()
 preprocessed_tweet.exclamation_mark_count()
 preprocessed_tweet.question_mark_count()
 preprocessed_tweet.period_count()
 preprocessed_tweet.find_consecutive_punctuation()
-#preprocessed_tweet.include_word2vec() -
+preprocessed_tweet.create_classification_matrix()
+preprocessed_tweet.create_feature_matrix()
 
-
-da = preprocessed_tweet.dataset
-print(da)
+print(preprocessed_tweet.dataset)
