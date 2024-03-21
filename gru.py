@@ -11,11 +11,12 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from preprocessing import class_array, feature_array
 
-# feature_tensor = torch.tensor(feature_array, dtype=torch.float32)
+feature_tensor = torch.tensor(feature_array, dtype=torch.float32)
+class_tensor = torch.tensor(class_array, dtype=torch.long)
 
 
 
@@ -104,27 +105,28 @@ print("Device:", device)
 
 # Network architecture hyperparameters
 
-input_size = len(feature_array[0])   # number of tweets 
-seq_length = len(feature_array)
+input_size = len(feature_array[0])   # number of features 
+seq_length = len(feature_array) # number of tweets
 hidden_size = 128
 num_layers = 2
 num_classes = 2
 num_epochs = 2
-batch_size = 100
+batch_size = 25
 learning_rate = 0.001
 
 # Data sets
-train_data = None 
+train_dataset = TensorDataset(feature_tensor, class_tensor)
 test_data = None
 
 # Load data
-train_loader = DataLoader(dataset=train_data,
-                                           batch_siz=batch_size,
-                                           shuffle=False)
+train_loader = DataLoader(dataset=train_dataset, 
+                          batch_size=batch_size, 
+                          shuffle=False)
 
-test_loader = DataLoader(dataset=test_data,
-                                           batch_siz=batch_size,
-                                           shuffle=False)
+
+# test_loader = DataLoader(dataset=test_data,
+#                                            batch_siz=batch_size,
+#                                            shuffle=False)
 
 # if the program run too slow:
 # change bidirectional into False 
@@ -134,7 +136,7 @@ class GRU(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
         # first arguent of Super is simply the kind
         # of RNN we want; can be interchanged with LSTM, GRU etc.
-        super(GRU, self)
+        super(GRU, self).__init__()
 
         # store number of layers and hidden sizes
         self.num_layers = num_layers
@@ -162,14 +164,14 @@ class GRU(nn.Module):
         """
     
         # create tensor with only 0's as the initial hidden state
-        h0 = torch.zeros(self.num_layers, x.size(0), self.hidden_size).to(device) # number of layers, batch size & hidden_size
+        h0 = torch.zeros(self.num_layers, self.hidden_size).to(device) # number of layers, batch size & hidden_size
 
         # call out RNN model
         out, _ = self.gru(x, h0) # so input and initial hidden state
         # the output out is of size: batch_siz, seq_length, hidden_size
 
         # now we want to decode the hidden state only of the last time step; therefore of the form (N,hidden_size)
-        out[:, -1, :]
+        out = out.reshape(out.size(0), -1)
 
         # need this for the linear layer fc
         out = self.fc(out)
@@ -289,13 +291,19 @@ def train_model(model, loss, optimizer, num_epochs):
 
 for epoch in range(num_epochs):
 
+    for batch_idx, (features, labels) in enumerate(train_loader):
+    # Process the current batch of data
+    # features: batch of feature tensors
+    # labels: batch of corresponding class label tensors
+        
     # loop over train data 
-    for index, (tweets, labels) in enumerate(feature_array, class_array) : # really look into train_loader
-        tweets = tweets.reshape(-1, seq_length, input_size).to(device)
+    # for tweets, labels in train_loader : # really look into train_loader
+        # features = features.reshape(-1, 1, input_size).to(device)
+        features = features.to(device)
         labels = labels.to(device)
 
         # forward pass to get prediction of this tweet
-        outputs = model(tweets)
+        outputs = model(features)
         loss = criterion(outputs, labels)
 
 
@@ -309,8 +317,6 @@ for epoch in range(num_epochs):
 
         # include wandb here to track losses etc?
     
-        if (index+1) % 100 == 0:
-            print(epoch)
 
     # add the results to the lists from above
     # train_losses.append(running_loss / len(feature_array.sampler))
