@@ -11,7 +11,7 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset, DataLoader, TensorDataset
+from torch.utils.data import Dataset, DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from preprocessing import class_array, feature_array
 
@@ -103,30 +103,7 @@ print("Device:", device)
 
 # feature_array = pad_inputs(feature_array)
 
-# Network architecture hyperparameters
 
-input_size = len(feature_array[0])   # number of features 
-seq_length = len(feature_array) # number of tweets
-hidden_size = 128
-num_layers = 2
-num_classes = 2
-num_epochs = 2
-batch_size = 25
-learning_rate = 0.001
-
-# Data sets
-train_dataset = TensorDataset(feature_tensor, class_tensor)
-test_data = None
-
-# Load data
-train_loader = DataLoader(dataset=train_dataset, 
-                          batch_size=batch_size, 
-                          shuffle=False)
-
-
-# test_loader = DataLoader(dataset=test_data,
-#                                            batch_siz=batch_size,
-#                                            shuffle=False)
 
 # if the program run too slow:
 # change bidirectional into False 
@@ -178,8 +155,138 @@ class GRU(nn.Module):
 
         return out # finito RNN
 
+# Data sets
+train_dataset = TensorDataset(feature_tensor, 
+                              class_tensor)
+test_data = None
+
+# include k-fold Cross Validation
+from sklearn.model_selection import KFold
+# use 10-fold CV --> divide test data into 10 "parts"
+k = 10
+kf = KFold(n_splits=k, 
+           shuffle=False)
+
+# Network architecture hyperparameters
+input_size = len(feature_array[0])   # number of features 
+hidden_size = 128
+num_layers = 2
+num_classes = 2
+num_epochs = 25
+batch_size = 50
+learning_rate = 0.005
+
+# initialize the model
+model = GRU(input_size, hidden_size, num_layers, num_classes).to(device)
+
+# criterion & optimizer can be modified
+# loss function 
+criterion = nn.CrossEntropyLoss()
+# optimizer -- Raluca is working on it 
+optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+for fold, (train_index, val_index) in enumerate(kf.split(train_dataset)):
+    print(f"Fold {fold+1}/{k}")
+
+    # subset dataset based on folds
+    train_subset = Subset(train_dataset, 
+                          train_index)
+    val_subset = Subset(train_dataset, 
+                        val_index)
+
+    # create dataloader
+    train_loader = DataLoader(train_subset,
+                              batch_size=batch_size,
+                              shuffle=False)
+    
+    val_loader = DataLoader(val_subset,
+                            batch_size=batch_size,
+                            shuffle=False)
+    
+    ### train model ###
+    for epoch in range(num_epochs):
+
+        for batch_idx, (features, labels) in enumerate(train_loader):
+        # Process the current batch of data
+        # features: batch of feature tensors
+        # labels: batch of corresponding class label tensors
+            
+        # loop over train data 
+        # for tweets, labels in train_loader : # really look into train_loader
+            # features = features.reshape(-1, 1, input_size).to(device)
+            features = features.to(device)
+            labels = labels.to(device)
+
+            # forward pass to get prediction of this tweet
+            outputs = model(features)
+            loss = criterion(outputs, labels)
 
 
+            # Modification of optimization required :)
+            # loss funfction
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+
+    ######## test the model on validation########
+    with torch.no_grad(): # look what this is/does
+        num_correct = 0
+        num_samples = 0
+
+        for tweets, labels in val_loader:
+            
+            tweets = tweets.reshape(-1, 1, input_size).to(device)
+            labels = labels.to(device)
+
+            # use trained model on the input tweet
+            outputs = model(tweets)
+
+            _, predicted= torch.max(outputs.data, 1) # what does this do?
+
+            num_samples += labels.size(0)
+            num_correct += (predicted == labels).sum().item()
+
+        acc = 100.0 * num_correct / num_samples
+
+    
+test_loader = DataLoader(test_data,
+                         batch_size=batch_size,
+                         shuffle=False)
+
+######## test the model ########
+with torch.no_grad(): # look what this is/does
+    num_correct = 0
+    num_samples = 0
+
+    for tweets, labels in test_loader:
+        
+        tweets = tweets.reshape(-1, 1, input_size).to(device)
+        labels = labels.to(device)
+
+        # use trained model on the input tweet
+        outputs = model(tweets)
+
+        _, predicted= torch.max(outputs.data, 1) # what does this do?
+
+        num_samples += labels.size(0)
+        num_correct += (predicted == labels).sum().item()
+
+    acc = 100.0 * num_correct / num_samples
+
+    print(acc)
+
+###########################
+# model training without CV
+'''
+
+# Load data
+train_loader = DataLoader(dataset=train_dataset, 
+                          batch_size=batch_size, 
+                          shuffle=False)
+# test_loader = DataLoader(dataset=test_data,
+#                                            batch_siz=batch_size,
+#                                            shuffle=False)
 
 # initialize the model
 model = GRU(input_size, hidden_size, num_layers, num_classes).to(device)
@@ -321,10 +428,6 @@ for epoch in range(num_epochs):
     # add the results to the lists from above
     # train_losses.append(running_loss / len(feature_array.sampler))
     # train_accs.append(100 * correct_preds / total_preds)
-        
-
-
-
 
 ######## test the model ########
 with torch.no_grad(): # look what this is/does
@@ -333,7 +436,7 @@ with torch.no_grad(): # look what this is/does
 
     for tweets, labels in test_loader:
         
-        tweets = tweets.reshape(-1, seq_length, input_size).to(device)
+        tweets = tweets.reshape(-1, 1, input_size).to(device)
         labels = labels.to(device)
 
         # use trained model on the input tweet
@@ -347,3 +450,4 @@ with torch.no_grad(): # look what this is/does
     acc = 100.0 * num_correct / num_samples
 
     print(acc)
+'''
