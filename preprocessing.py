@@ -11,7 +11,7 @@ from gensim.models import word2vec
 from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
-from extended_data import emoticons_dic, OG_dataset, balanced_dataset, unbalanced_dataset, testset
+from extended_data import emoticons_dic, pos_tag_dict, OG_dataset, balanced_dataset, unbalanced_dataset, testset
 import pandas as pd
 
 
@@ -20,6 +20,7 @@ class Preprocessing:
     def __init__(self, dataset):
         self.analyzer = SentimentIntensityAnalyzer()
         self.vocabulary = set()
+        self.pos_tags = []
         self.dataset = dataset
         self.bigrams = set()
         self.embeddings = []
@@ -253,6 +254,7 @@ class Preprocessing:
 
         # go through dataset to get tokenized text
         for tweet in self.dataset:
+            one_hot_encoded = []
             tokenized_tweet = [tweet["tweetTokenized"]]
 
             # take the sentence & pos tag it
@@ -269,10 +271,19 @@ class Preprocessing:
                 elif token[0][0] == "#":
                     tweet["posTagged_tweet"][index] = (token[0], "HASH")
                 elif token[0] in tweet["emojis"]:
-                    tweet["posTagged_tweet"][index] = (token[0], "EMOJI") 
+                    tweet["posTagged_tweet"][index] = (token[0], "EMOJI")
                 elif token[0] in emoticons_dic.keys():
                     tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
+
+            for (token, pos) in tweet["posTagged_tweet"]:
+                    # Initialize one-hot vector with zeros
+                vector = [0] * len(pos_tag_dict)
+                    # Set the index corresponding to the POS tag to 1
+                vector[pos_tag_dict[pos]] = 1
+                one_hot_encoded.append(vector)
+            self.pos_tags.append(one_hot_encoded)
+            progressBar.close()
             progressBar.update(1)
 
         progressBar.close()
@@ -507,15 +518,13 @@ class Preprocessing:
             for token in tokenized_sentence:
                 if token in wv:
                     self.embeddings.append(wv[token])
-                    # counter += 1
-                    # wv_res += wv[token]
-                    # tweet["tweetTokenEmbeddings"].append(wv_res)
+                    counter += 1
+                    wv_res += wv[token]
+                    tweet["tweetTokenEmbeddings"].append(wv_res)
                 else:
                     self.embeddings.append(None)
 
             # compute average of the sentence
-            # wv_res = wv_res/counter
-
             progressBar.update(1)
 
         progressBar.close()
@@ -651,6 +660,7 @@ class Preprocessing:
             "class",
             "tweetText",
             "tweetTokenized",
+            "posTagged_tweet",
             "emoticons",
             "emoticons_description",
             "tweetWithoutEmojicon",
@@ -693,7 +703,8 @@ train_data.pos_tagging()
 #train_data.period_count()
 #train_data.find_consecutive_punctuation()
 
-print(train_data.dataset)
+#pos matrix in self.pos_tags, not padded yet, we will have to see:)
+
 #train_data.create_classification_array()
 #train_data.create_feature_array()
 
