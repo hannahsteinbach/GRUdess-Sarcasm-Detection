@@ -14,6 +14,8 @@ import numpy as np
 from extended_data import emoticons_dic, OG_dataset, balanced_dataset, unbalanced_dataset, testset
 import pandas as pd
 
+
+
 class Preprocessing:
     def __init__(self, dataset):
         self.analyzer = SentimentIntensityAnalyzer()
@@ -23,7 +25,6 @@ class Preprocessing:
         self.embeddings = []
         self.feature_array = None
         self.class_array = None
-
 
     def tokenizer(self):
         """
@@ -89,14 +90,16 @@ class Preprocessing:
         for tweet in self.dataset:
             tweet["tweetWithoutEmojicon"] = emoji.replace_emoji(tweet["tweetText"], replace='')
             tweet["tweetWithEmojiconDescription"] = emoji.demojize(tweet["tweetText"])
-            tweet["emojis_description"] = [emoji.demojize(entry['emoji']) for entry in emoji.emoji_list(tweet["tweetText"])]
+            tweet["emojis_description"] = [emoji.demojize(entry['emoji']) for entry in
+                                           emoji.emoji_list(tweet["tweetText"])]
             tweet["emojis"] = [entry['emoji'] for entry in emoji.emoji_list(tweet["tweetText"])]
 
             for emoj in tweet["emojis_description"]:
                 modified_emoji = re.sub(r':', '', emoj)
                 modified_emoji = re.sub(r'_', ' ', modified_emoji)
                 modified_emoji_with_tags = "<e> " + modified_emoji + " </e>"
-                tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(emoj, modified_emoji_with_tags)
+                tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(emoj,
+                                                                                                      modified_emoji_with_tags)
             if len(tweet["tweetTokenized"]) != 0:
                 tweet["frequency_emojis"] = len(tweet["emojis"]) / len(tweet["tweetTokenized"])
             else:
@@ -159,38 +162,33 @@ class Preprocessing:
 
                             # replace emoticon with the description
                             tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(token,
-                                                                                                            replacement)
+                                                                                                                  replacement)
 
                             # delete emoticon from other entry
                             tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
-
-                            # change POS tag for token
-                            tweet["posTagged_tweet"][index] = (token, "EMOTICON")
-                            break
 
                 elif token == "xD" or token == "XD":
                     replacement = "<ec> " + emoticons_dic["xD"] + " </ec>"
 
                     # replace emoticon with the description
-                    tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(token, replacement)
+                    tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(token,
+                                                                                                          replacement)
 
                     # delete emoticon from other entry
                     tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
 
-                    tweet["posTagged_tweet"][index] = (token, "EMOTICON")
+                    #tweet["posTagged_tweet"][index] = (token, "EMOTICON")
 
 
                 elif token == "XP":
                     replacement = "<ec> " + emoticons_dic["xP"] + " </ec>"
 
                     # replace emoticon with the description
-                    tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(token, replacement)
+                    tweet["tweetWithEmojiconDescription"] = tweet["tweetWithEmojiconDescription"].replace(token,
+                                                                                                          replacement)
 
                     # delete emoticon from other entry
                     tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
-
-                    tweet["posTagged_tweet"][index] = (token, "EMOTICON")
-
 
             if len(tweet["tweetTokenized"]) != 0:
                 tweet["frequency_emoticons"] = len(tweet["emoticons"]) / len(tweet["tweetTokenized"])
@@ -199,8 +197,7 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-    
-    
+
     ########### PRE-PROCESSING FOR GRU ###########
 
     def create_vocabulary(self):
@@ -241,7 +238,7 @@ class Preprocessing:
         progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
 
         # load model
-        model = "./english_newspaper_2017-09-15.model"
+        model = "./data/english_newspaper_2017-09-15.model"
 
         """
         # example sentences
@@ -264,15 +261,17 @@ class Preprocessing:
                 posTagged_tweet = tagged_sentence
 
                 # create new dictionary key
-                tweet["posTagged_tweet"] = posTagged_tweet #change this
+                tweet["posTagged_tweet"] = posTagged_tweet  # change this
 
             for index, token in enumerate(tweet["posTagged_tweet"]):
                 if token[0][0] == "@":
                     tweet["posTagged_tweet"][index] = (token[0], "@")
                 elif token[0][0] == "#":
                     tweet["posTagged_tweet"][index] = (token[0], "HASH")
-
-
+                elif token[0] in tweet["emojis"]:
+                    tweet["posTagged_tweet"][index] = (token[0], "EMOJI") 
+                elif token[0] in emoticons_dic.keys():
+                    tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
             progressBar.update(1)
 
@@ -339,10 +338,13 @@ class Preprocessing:
             for unigram in unigrams:
                 if unigram in tokenizedTweet:
                     unigramsIndicators.append(1)
+                    tweet[str(unigram)] = 1
                 else:
                     unigramsIndicators.append(0)
+                    tweet[str(unigram)] = 0
 
-            # update unigram vector for each tweet
+
+                    # update unigram vector for each tweet
             tweet["unigrams "] = unigramsIndicators
 
             # create one-hot encoded bigram vector for each tweet
@@ -418,7 +420,7 @@ class Preprocessing:
                     if word.isupper():
                         if word != "I" and word != "XD":
                             allCaps += 1
-                for character in word: #exclude first character, if we do not want that, just word
+                for character in word:  # exclude first character, if we do not want that, just word
                     if character.isalpha() and character.isupper():
                         letterCaps += 1
                 progressBar.update(1)
@@ -434,7 +436,6 @@ class Preprocessing:
                 tweet["letterCapsCount"] = letterCaps / totalLetters
             else:
                 tweet["letterCapsCount"] = 0
-
 
             progressBar.close()
 
@@ -466,7 +467,7 @@ class Preprocessing:
                         repeating_letters_words += 1
 
             if words_count > 0:
-                tweet["repeatingLettersWords"] = repeating_letters_words/words_count
+                tweet["repeatingLettersWords"] = repeating_letters_words / words_count
             else:
                 tweet["repeatingLettersWords"] = 0
             progressBar.update(1)
@@ -657,6 +658,15 @@ class Preprocessing:
             "emojis_description",
             "emojis"
         ])
+        expanded_unigrams = features['unigrams'].apply(pd.Series)
+        expanded_bigrams = features['bigrams'].apply(pd.Series)
+
+        features = pd.concat([features, expanded_unigrams], axis=1)
+        features.drop('unigrams', axis=1, inplace=True)
+
+        features = pd.concat([features, expanded_bigrams], axis=1)
+        features.drop('bigrams', axis=1, inplace=True)
+
         self.feature_array = features.values
 
     def create_classification_array(self):
@@ -665,28 +675,59 @@ class Preprocessing:
         class_pd = df["class"]
         self.class_array = class_pd.values
 
-
 # Example usage:
-preprocessed_tweet = Preprocessing(OG_dataset)
-preprocessed_tweet.tokenizer()
-preprocessed_tweet.pos_tagging()
-preprocessed_tweet.handling_emojis()
-preprocessed_tweet.handling_emoticons()
+train_data = Preprocessing(OG_dataset)
+train_data.tokenizer()
+train_data.handling_emojis()
+train_data.handling_emoticons()
+train_data.pos_tagging()
+#train_data.sentiment()
+#train_data.create_vocabulary()
+#train_data.uni_and_bigrams()
+#train_data.tweet_length_tokenized()
+#train_data.caps_counts()
+#train_data.same_letter_count()
+#train_data.ats_count()
+#train_data.exclamation_mark_count()
+#train_data.question_mark_count()
+#train_data.period_count()
+#train_data.find_consecutive_punctuation()
 
-# preprocessed_tweet.sentiment()
-# preprocessed_tweet.create_vocabulary()
-# preprocessed_tweet.uni_and_bigrams()
-#preprocessed_tweet.pos_tagging()
-# preprocessed_tweet.tweet_length_tokenized()
-# preprocessed_tweet.caps_counts()
-# preprocessed_tweet.same_letter_count()
-# preprocessed_tweet.ats_count()
-# preprocessed_tweet.exclamation_mark_count()
-# preprocessed_tweet.question_mark_count()
-# preprocessed_tweet.period_count()
-# preprocessed_tweet.find_consecutive_punctuation()
-# preprocessed_tweet.create_classification_array()
-# preprocessed_tweet.create_feature_array()
+print(train_data.dataset)
+#train_data.create_classification_array()
+#train_data.create_feature_array()
 
-# class_array = preprocessed_tweet.class_array
-# feature_array = preprocessed_tweet.feature_array
+
+#print(train_data.feature_array)
+#class_array_train = train_data.class_array
+#feature_array_train = train_data.feature_array
+
+
+
+'''# Example usage for test data:
+test_data = Preprocessing(testset)
+test_data.tokenizer()
+test_data.handling_emojis()
+test_data.handling_emoticons()
+test_data.sentiment()
+# Use the same vocabulary as in the training data
+# If you saved the vocabulary during training, load it here
+# Otherwise, use the vocabulary from the training data directly
+test_data.vocabulary = train_data.vocabulary
+test_data.tweet_length_tokenized()
+test_data.caps_counts()
+test_data.same_letter_count()
+test_data.ats_count()
+test_data.exclamation_mark_count()
+test_data.question_mark_count()
+test_data.period_count()
+test_data.find_consecutive_punctuation()
+test_data.create_classification_array()
+test_data.create_feature_array()
+
+class_array_test = test_data.class_array
+feature_array_test = test_data.feature_array'''
+
+#print(feature_array_train)
+
+
