@@ -6,32 +6,6 @@ from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from preprocessing import class_array, feature_array
 from sklearn.model_selection import KFold
 
-feature_tensor = torch.tensor(feature_array, dtype=torch.float32)
-class_tensor = torch.tensor(class_array, dtype=torch.long)
-
-# Data sets
-train_dataset = TensorDataset(feature_tensor, 
-                              class_tensor)
-test_data = None
-
-# include k-fold Cross Validation
-# use 10-fold CV --> divide test data into 10 "parts"
-k = 3
-kf = KFold(n_splits=k, 
-           shuffle=False)
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-input_size = 13 
-sequence_len = 1
-num_layers = 2
-
-hidden_size = 128
-num_classes = 2
-num_epochs = 3
-batch_size = 25
-learning_rate = 0.005
-
 
 class GRUDESS(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes):
@@ -55,17 +29,57 @@ class GRUDESS(nn.Module):
         out = self.fc(out)
         return out
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-model = GRUDESS(input_size, hidden_size, num_layers, num_classes).to(device)
+# Define hyperparameters
+input_size = 13 
+sequence_len = 1
+num_layers = 2
 
-criterion = nn.CrossEntropyLoss()
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+hidden_size = 128
+num_classes = 2
+num_epochs = 25
+batch_size = 50
+learning_rate = 0.005
+
+k = 3
+
+# Convert data to PyTorch tensors
+feature_tensor = torch.tensor(feature_array, dtype=torch.float32)
+class_tensor = torch.tensor(class_array, dtype=torch.long)
+
+# Data sets
+train_dataset = TensorDataset(feature_tensor, 
+                              class_tensor)
+test_data = None
+
+# include k-fold Cross Validation
+kf = KFold(n_splits=k, 
+           shuffle=False)
+
+"""
+TO DO:
+Switch from kFold to StrasifiedkFold, is better for inbalanced dataset
+https://www.youtube.com/watch?v=-8s9KuNo5SA&t=416s
+min 19:00
+"""
+
 
 # Train the model
 # n_total_steps = len(train_loader)
 
+# Track accuracy for each fold
+folds_values = dict()
+
 for fold, (train_index, val_index) in enumerate(kf.split(train_dataset)):
     print(f"Fold {fold+1}/{k}")
+
+    # save results of losses etc. for every fold/epoch etc.
+    folds_values[fold] = {
+        "losses": list(),
+        "train_sarcasm": 0,
+        "val_sarcasm": 0
+    }
 
     # subset dataset based on folds
     train_subset = Subset(train_dataset, 
@@ -77,21 +91,34 @@ for fold, (train_index, val_index) in enumerate(kf.split(train_dataset)):
     train_loader = DataLoader(train_subset,
                               batch_size=batch_size,
                               shuffle=False)
-    
     val_loader = DataLoader(val_subset,
                             batch_size=batch_size,
                             shuffle=False)
+    
+    print(len(train_loader))
+    print(len(val_loader))
+
+    model = GRUDESS(input_size, hidden_size, num_layers, num_classes).to(device)
+
+    criterion = nn.CrossEntropyLoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     for epoch in range(num_epochs):
+        model.train()
         for i, (tweets, labels) in enumerate(train_loader):
             # want size [batch, seq, input]
             # -> 25, 1, 13
             tweets = tweets.reshape(-1, sequence_len, input_size).to(device)
             labels = labels.to(device)
 
+            for val in labels:
+                if val == 1:
+                    folds_values[fold]["train_sarcasm"] += 1
+
             # forward pass
             outputs = model(tweets)
             loss = criterion(outputs, labels)
+            folds_values[fold]["losses"].append(loss)
 
             # backward and optimization
             optimizer.zero_grad()
@@ -101,16 +128,21 @@ for fold, (train_index, val_index) in enumerate(kf.split(train_dataset)):
             if (i+1) % 100 == 0:
                 print(f"Epoch {epoch+1}/{num_epochs}")
 
+    model.eval()
+    n_correct = 0
+    n_samples = 0
 
     # validation test the model
     with torch.no_grad():
-        n_correct = 0
-        n_samples = 0
 
         for tweets, labels in val_loader:
             tweets = tweets.reshape(-1, sequence_len, input_size).to(device)
             labels = labels.to(device)
             outputs = model(tweets)
+
+            for val in labels:
+                if val == 1:
+                    folds_values[fold]["val_sarcasm"] += 1
 
             _, predicted = torch.max(outputs.data, 1)
             n_samples += labels.size(0)
@@ -122,19 +154,21 @@ for fold, (train_index, val_index) in enumerate(kf.split(train_dataset)):
         """TO DO: TAKE VALIDATION AVERAGE 
         SAV RESULTS"""
 
+    # fold_accuracies.append(acc)
+
 # test the model
-with torch.no_grad():
-    n_correct = 0
-    n_samples = 0
+# with torch.no_grad():
+#     n_correct = 0
+#     n_samples = 0
 
-    for tweets, labels in val_loader:
-        tweets = tweets.reshape(-1, sequence_len, input_size).to(device)
-        labels = labels.to(device)
-        outputs = model(tweets)
+#     for tweets, labels in val_loader:
+#         tweets = tweets.reshape(-1, sequence_len, input_size).to(device)
+#         labels = labels.to(device)
+#         outputs = model(tweets)
 
-        _, predicted = torch.max(outputs.data, 1)
-        n_samples += labels.size(0)
-        n_correct += (predicted == labels).sum().item()
+#         _, predicted = torch.max(outputs.data, 1)
+#         n_samples += labels.size(0)
+#         n_correct += (predicted == labels).sum().item()
 
-    acc = 100.0 * n_correct / n_samples
-    print(f"Accuracy of {acc}%")
+#     acc = 100.0 * n_correct / n_samples
+#     print(f"Accuracy of {acc}%")
