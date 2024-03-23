@@ -485,7 +485,7 @@ class Preprocessing:
 
         progressBar.close()
 
-    def include_word2vec(self):
+    def include_2vec(self):
         """
             Function to include word2vec word embeddings.
 
@@ -493,23 +493,41 @@ class Preprocessing:
             INFORMATION
             We could try out different models, the higher thhe
             dimension though, the more accurate the results
+
+            word2vec models:
+            https://github.com/piskvorky/gensim-data
         """
 
         total_iterations = len(self.dataset)
         progressBar = tqdm(total=total_iterations, desc="Word Embeddings...")
 
         # load pre-trained model
-        wv = api.load("glove-twitter-100")
+        # wv = api.load("glove-twitter-100")
+        wv = api.load("word2vec-google-news-300")
         # save the vectors
         # wv.save("./used_models/vectors.kv")
-        # wv = "./used_models/vectors.kv"
+        # wv = "./data/vectors.kv"
+
+        # load emoji2vec model (emoji2vec.bin)
+        def emoji_embeddings(path="./data/emoji2vec.txt"):
+            with open(path, "r", encoding="UTF-8") as f:
+                file = f.readlines()
+
+                emoji_emb_dict = dict()
+
+                for line in file:
+                    elements = line.split()
+                    emoji_emb_dict[elements[0]] = elements[1:]
+
+            return emoji_emb_dict
+
+        emoji_emb_dict = emoji_embeddings()
+
         for tweet in self.dataset:
             tokenized_sentence = tweet["tweetTokenized"]
 
-            # get dimension of vctor (based on chosen model)
-            vector_size = wv.vector_size
-            # initialize the vector
-            wv_res = np.zeros(vector_size)
+            # create tweet dict entry
+            tweet["embeddings"] = list()
 
             # count the words that are represented as
             # vector --> later for the average of thee sentence
@@ -517,14 +535,18 @@ class Preprocessing:
 
             for token in tokenized_sentence:
                 if token in wv:
-                    self.embeddings.append(wv[token])
-                    counter += 1
-                    wv_res += wv[token]
-                    tweet["tweetTokenEmbeddings"].append(wv_res)
+                    tweet["embeddings"].append(wv[token])
+                    # counter += 1
+                    # wv_res += wv[token]
+                    # tweet["tweetTokenEmbeddings"].append(wv_res)
+                elif token in emoji_emb_dict.keys(): # what about tokens where 2+ emojis occur????
+                    tweet["embeddings"].append(emoji_emb_dict[token])
                 else:
-                    self.embeddings.append(None)
+                    tweet["embeddings"].append(None)
 
             # compute average of the sentence
+            # wv_res = wv_res/counter
+
             progressBar.update(1)
 
         progressBar.close()
