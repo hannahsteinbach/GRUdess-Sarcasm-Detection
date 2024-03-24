@@ -24,7 +24,7 @@ Overall: 6936 tweets → 3468 sarcastic, 3468 non-sarcastic (including rephrases
 	
 Overall: 8670 tweets → 1734 sarcastic, 6936 non-sarcastic (including rephrases)
 
-- Test set
+- Test set (as provided by Abu Farha et al. (2022))
 
 Overall: 1400 tweets → 200 sarcastic, 1200 non-sarcastic
 
