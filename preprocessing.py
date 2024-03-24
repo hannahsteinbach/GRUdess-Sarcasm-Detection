@@ -79,7 +79,7 @@ class Preprocessing:
 
         Output:
         dataset[tweet]["prePaddedVector"]
-                        (tensor)            : Pre-padded vector of the tweet based on the length of the
+                        (list)              : Pre-padded vector of the tweet based on the length of the
                                                 longest tweet in the dataset.
                                                 For OG: 117
         """
@@ -97,7 +97,7 @@ class Preprocessing:
         # initialize padded vector filled with zeros
         for tweet in self.dataset:
 
-            padded_vector = torch.zeros(longest_tweet)
+            padded_vector = [0 for i in range(longest_tweet)]
             tweet["prePaddedVector"] = padded_vector
 
             progressBar.update(1)
@@ -354,7 +354,9 @@ class Preprocessing:
 
     def uni_and_bigrams(self):
         """
-        Function to create unigrams and bigrams.
+        Function to create unigrams and bigrams, their encodings, tweets with the
+        respective encodings and based on that pre-padded feature tensors for
+        unigram-feature and bigram-feature.
 
         Input:
         1. dataset (list)  :   A list of dictionaries.
@@ -362,53 +364,75 @@ class Preprocessing:
                                 information need to create unigram and bigram sets.
 
         Output:
-        1. dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
+        1. tweet["tweetBigrams"] (list)         : Tweet represented as bigrams.
+        2. tweet["tweetUnigramsEncoded"] list() : Tweet with encoded unigrams.
+        3. tweet["tweetBigramsEncoded"]         : Tweet with encoded bigrams.
+        4. tweet["tweetUnigramFeatureTensor"]   
+                (tensor)                        : Unigram feature Tensor of the tweet.
+                                                    in length of longest tweet filled 
+                                                    with the encoded unigram
+                                                    information pf thr tweet.
+                                                    Example:
+                                                    "I like cake .", max_tweet_len = 7:
+                                                    [0 0 0 1 2 3 4]
+        5. tweet["tweetBigramFeatureTensor"]   
+                (tensor)                        : Bigram feature Tensor of the tweet.
+                                                    Similar to 
         """
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Creating unigrams and bigrams...")
 
         # set of all unigrams is equivalent to vocabulary
         unigrams = self.vocabulary
 
         # create set of all bigrams
+        progressBar = tqdm(total=total_iterations, desc="Creating Bigrams...")
+
         for tweet in self.dataset:
             tokenizedTweet = tweet["tweetTokenized"]
 
             # bigrams are consecutive tokens separated by a whitespace
             bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
+            tweet["tweetBigrams"] = bigram
             self.bigrams.update(bigram)
 
-        # we use binary indicators for unigrams and bigrams (to check whether they are present in a tweet or not)
+            progressBar.update(1)
+        progressBar.close()
+
+        # encode unigrams
+        # 49 is from the length of the pos_tag_dict, a constant 
+        unigrams_encoded = {unigram: 49+index+1 for index, unigram in enumerate(unigrams)}
+
+        # encode bigrams
+        bigrams_encoded = {bigram: 49+len(unigrams_encoded)+index+1 for index, bigram in enumerate(self.bigrams)}
+
+        progressBar = tqdm(total=total_iterations, desc="Encode Unigrams and Bigrams...")
+
+        # create encoded tweets as unigrams and bigrams
         for tweet in self.dataset:
-            tokenizedTweet = tweet["tweetTokenized"]
-            bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
+            # first encode the whole tweet in unigram and bigram
+            tweet["tweetUnigramsEncoded"] = [unigrams_encoded[token] for token in tweet["tweetTokenized"]]
+            tweet["tweetBigramsEncoded"] = [bigrams_encoded[bigram] for bigram in tweet["tweetBigrams"]]
 
-            # create one-hot encoded unigram vector for each tweet
-            unigramsIndicators = []
+            # copy prepadded list 
+            tweet["tweetUnigramFeatureList"] = tweet["prePaddedVector"].copy()
+            tweet["tweetBigramFeatureList"] = tweet["prePaddedVector"].copy()
 
-            for unigram in unigrams:
-                if unigram in tokenizedTweet:
-                    unigramsIndicators.append(1)
-                    tweet[str(unigram)] = 1
-                else:
-                    unigramsIndicators.append(0)
-                    tweet[str(unigram)] = 0
+            # replace values within the prepadded lists
+            # --> create encoded, prepadded feature tensors for uni- & bigrams
+            counter = -1
+            for encoded_unigram in reversed(tweet["tweetUnigramsEncoded"]):
+                tweet["tweetUnigramFeatureList"][counter] = encoded_unigram
+                counter -= 1
+                # change list into tensor
+                tweet["tweetUnigramFeatureTensor"] = torch.Tensor(tweet["tweetUnigramFeatureList"])
 
-
-                    # update unigram vector for each tweet
-            tweet["unigrams "] = unigramsIndicators
-
-            # create one-hot encoded bigram vector for each tweet
-            bigramsIndicators = []
-
-            for bigram in self.bigrams:
-                if bigram in tweet["tweetText"]:
-                    bigramsIndicators.append(1)
-                else:
-                    bigramsIndicators.append(0)
-
-            # update bigram vector for each tweet
-            tweet["bigrams"] = bigramsIndicators
+            counter = -1
+            for encoded_bigram in reversed(tweet["tweetBigramsEncoded"]):
+                tweet["tweetBigramFeatureList"][counter] = encoded_bigram
+                counter -= 1
+                # change list into tensor
+                tweet["tweetBigramFeatureTensor"] = torch.Tensor(tweet["tweetBigramFeatureList"])
+        
             progressBar.update(1)
 
         progressBar.close()
