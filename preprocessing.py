@@ -693,15 +693,6 @@ class Preprocessing:
             "emojis_description",
             "emojis"
         ])
-        expanded_unigrams = features['unigrams'].apply(pd.Series)
-        expanded_bigrams = features['bigrams'].apply(pd.Series)
-
-        features = pd.concat([features, expanded_unigrams], axis=1)
-        features.drop('unigrams', axis=1, inplace=True)
-
-        features = pd.concat([features, expanded_bigrams], axis=1)
-        features.drop('bigrams', axis=1, inplace=True)
-
         self.feature_array = features.values
 
     def create_classification_array(self):
@@ -739,3 +730,5 @@ pos_array_train = train_data.pos_array
 
 combined_matrix = np.concatenate((feature_array_train, pos_array_train), axis=1)
 combined_tensor = torch.tensor(combined_matrix)
+
+class_tensor_train = torch.tensor(class_array_train)
