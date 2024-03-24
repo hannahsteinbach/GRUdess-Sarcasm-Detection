@@ -12,17 +12,17 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 The following datasets are used for this classification task: 
 
-OG_dataset (as provided by Farha et al. (2022))
+OG_dataset (as provided by Abu Farha et al. (2022))
  
-	Overall: 4335 tweets → 867 sarcastic, 3468 non-sarcastic (including rephrases)
+Overall: 4335 tweets → 867 sarcastic, 3468 non-sarcastic (including rephrases)
 
 Balanced, extended dataset (OG_dataset, extended by data from Ghosh and Veale (2016))
 	 
-	Overall: 6936 tweets → 3468 sarcastic, 3468 non-sarcastic (including rephrases)
+Overall: 6936 tweets → 3468 sarcastic, 3468 non-sarcastic (including rephrases)
 
 Imbalanced, extended dataset (OG_dataset, extended by data from Ghosh and Veale (2016))
 	
-	Overall: 8670 tweets → 1734 sarcastic, 6936 non-sarcastic (including rephrases)
+Overall: 8670 tweets → 1734 sarcastic, 6936 non-sarcastic (including rephrases)
 
 Test set
 
