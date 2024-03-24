@@ -35,7 +35,7 @@ class GRUDESS(nn.Module):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Define hyperparameters
-input_size = 13
+input_size = combined_tensor_train.size(1)
 sequence_len = 1
 num_layers = 2
 
@@ -151,15 +151,12 @@ for fold, (train_index, val_index) in enumerate(skf.split(combined_tensor_train,
             all_f1_scores.append(f1)
 
         acc = 100.0 * n_correct / n_samples
-        print(f"Accuracy of {acc}%")
-        print(folds_values)
-
         """TO DO: TAKE VALIDATION AVERAGE 
         SAV RESULTS"""
 
 overall_f1_score = np.mean(all_f1_scores)
 print("Overall F1 score:", overall_f1_score)
-
+print(f"Accuracy of {acc}%")
 
 # test the model
 # with torch.no_grad():

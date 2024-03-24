@@ -767,6 +767,8 @@ class Preprocessing:
         class_pd = df["class"]
         self.class_array = class_pd.values
 
+
+
 train_data = Preprocessing(OG_dataset)
 train_data.tokenizer()
 train_data.tweet_length_tokenized()
@@ -793,8 +795,14 @@ class_array_train = train_data.class_array
 feature_array_train = train_data.feature_array
 pos_array_train = train_data.pos_array
 
+feature_array_train = feature_array_train.astype(np.float32)
+feature_tensor = torch.tensor(feature_array_train)
+
+pos_array_train = pos_array_train.astype(np.float32)
 
 combined_matrix = np.concatenate((feature_array_train, pos_array_train), axis=1)
-combined_tensor = torch.tensor(combined_matrix)
 
+
+combined_tensor_train = torch.tensor(combined_matrix)
 class_tensor_train = torch.tensor(class_array_train)
+
