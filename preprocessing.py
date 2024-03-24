@@ -1,4 +1,5 @@
 from tqdm import tqdm
+import torch
 import csv
 from somajo import SoMaJo
 from someweta import ASPTagger
@@ -64,6 +65,42 @@ class Preprocessing:
 
             progressBar.update(1)
 
+        progressBar.close()
+
+    def prepaded_tweet(self):
+        """
+        Function we can use as a base to encode feature
+        information later on.
+        Generates a list, for each tweet pre-padded to the
+        length of the longest tweet.
+
+        Input:
+        dataset (list)                      : List of dictionaries of each tweet.
+
+        Output:
+        dataset[tweet]["prePaddedVector"]
+                        (tensor)            : Pre-padded vector of the tweet based on the length of the
+                                                longest tweet in the dataset.
+                                                For OG: 117
+        """
+
+        # first iterate through all tweets to find longest tweet
+        longest_tweet = 1 # 117 for OG
+        for tweet in self.dataset:
+            len_of_tweet = len(tweet["tweetTokenized"])
+            if len_of_tweet > longest_tweet:
+                longest_tweet = len_of_tweet
+    
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Initialize Pre-Paddings...")
+
+        # initialize padded vector filled with zeros
+        for tweet in self.dataset:
+
+            padded_vector = torch.zeros(longest_tweet)
+            tweet["prePaddedVector"] = padded_vector
+
+            progressBar.update(1)
         progressBar.close()
 
     def handling_emojis(self):
