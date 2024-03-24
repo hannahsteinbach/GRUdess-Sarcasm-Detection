@@ -227,7 +227,7 @@ class Preprocessing:
             progressBar.update(1)
         progressBar.close()
 
-        def pos_tagging(self):
+    def pos_tagging(self):
         """
         Function that attaches POS tags to the tokenized text in the dataset.
 
@@ -235,7 +235,7 @@ class Preprocessing:
         1. dataset (list)   :   A list of dictionaries.
 
         Output:
-        Array for pos tags as additional features
+        None
         """
         num_rows = len(self.dataset)
         num_cols = max(tweet["tweetTokenizedLength"] for tweet in self.dataset)
