@@ -8,6 +8,26 @@ To make it easy for you to get started with GitLab, here's a list of recommended
 
 Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
 
+## Datasets statistic
+
+The following datasets are used for this classification task: 
+
+OG_dataset (as provided by Farha et al. (2022))
+ 
+	Overall: 4335 tweets → 867 sarcastic, 3468 non-sarcastic (including rephrases)
+
+Balanced, extended dataset (OG_dataset, extended by data from Ghosh and Veale (2016))
+	 
+	Overall: 6936 tweets → 3468 sarcastic, 3468 non-sarcastic (including rephrases)
+
+Imbalanced, extended dataset (OG_dataset, extended by data from Ghosh and Veale (2016))
+	
+	Overall: 8670 tweets → 1734 sarcastic, 6936 non-sarcastic (including rephrases)
+
+Test set
+
+Overall: 1400 tweets → 200 sarcastic, 1200 non-sarcastic
+
 ## Add your files
 
 - [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
