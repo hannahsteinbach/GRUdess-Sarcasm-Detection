@@ -5,6 +5,7 @@ from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
+import torch
 import html
 import gensim
 from gensim.models import word2vec
@@ -13,6 +14,7 @@ import gensim.downloader as api
 import numpy as np
 from extended_data import emoticons_dic, pos_tag_dict, OG_dataset, balanced_dataset, unbalanced_dataset, testset
 import pandas as pd
+
 
 
 
@@ -26,6 +28,7 @@ class Preprocessing:
         self.embeddings = []
         self.feature_array = None
         self.class_array = None
+        self.pos_array = None
 
     def tokenizer(self):
         """
@@ -224,46 +227,44 @@ class Preprocessing:
             progressBar.update(1)
         progressBar.close()
 
-    def pos_tagging(self):
+        def pos_tagging(self):
         """
         Function that attaches POS tags to the tokenized text in the dataset.
 
         Input:
         1. dataset (list)   :   A list of dictionaries.
-                                FURTHER INFO TO BE ADDED
 
         Output:
-        TO BE DETERMINED
+        Array for pos tags as additional features
         """
+        num_rows = len(self.dataset)
+        num_cols = max(tweet["tweetTokenizedLength"] for tweet in self.dataset)
+
+        pos_array = np.zeros((num_rows, num_cols), dtype=int)
+
         total_iterations = len(self.dataset)
         progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
 
-        # load model
+        # Load model
         model = "./data/english_newspaper_2017-09-15.model"
 
-        """
-        # example sentences
-        sentences = [["Ein", "Satz", "ist", "eine", "Liste", "von", "Tokens", "."],
-                 ["Zeitfliegen", "mögen", "einen", "Pfeil", "."]]
-        """
-        # create object for pos tagger
+        # Create object for pos tagger
         print("Loading PoS tagger...")
         asptagger = ASPTagger()
         asptagger.load(model)
         print("Loaded PoS tagger.")
 
-        # go through dataset to get tokenized text
+        # Go through dataset to get tokenized text
         for tweet in self.dataset:
-            one_hot_encoded = []
             tokenized_tweet = [tweet["tweetTokenized"]]
 
-            # take the sentence & pos tag it
+            # Tag the sentence with POS
             for sentence in tokenized_tweet:
                 tagged_sentence = asptagger.tag_sentence(sentence)
                 posTagged_tweet = tagged_sentence
 
-                # create new dictionary key
-                tweet["posTagged_tweet"] = posTagged_tweet  # change this
+                # Create new dictionary key
+                tweet["posTagged_tweet"] = posTagged_tweet
 
             for index, token in enumerate(tweet["posTagged_tweet"]):
                 if token[0][0] == "@":
@@ -275,18 +276,20 @@ class Preprocessing:
                 elif token[0] in emoticons_dic.keys():
                     tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
+        for i, tweet in enumerate(self.dataset):
+            pos_tags = tweet["posTagged_tweet"]
 
-            for (token, pos) in tweet["posTagged_tweet"]:
-                    # Initialize one-hot vector with zeros
-                vector = [0] * len(pos_tag_dict)
-                    # Set the index corresponding to the POS tag to 1
-                vector[pos_tag_dict[pos]] = 1
-                one_hot_encoded.append(vector)
-            self.pos_tags.append(one_hot_encoded)
-            progressBar.close()
+            distance = num_cols - len(tweet["posTagged_tweet"])
+
+            # Fill pos_array with pos_tag_dict indices
+            for j, (token, tag) in enumerate(pos_tags):
+                pos_array[i, j + distance] = pos_tag_dict[tag]
+
             progressBar.update(1)
 
         progressBar.close()
+
+        self.pos_array = pos_array
 
     def sentiment(self):
         """
@@ -707,60 +710,32 @@ class Preprocessing:
         class_pd = df["class"]
         self.class_array = class_pd.values
 
-# Example usage:
 train_data = Preprocessing(OG_dataset)
 train_data.tokenizer()
+train_data.tweet_length_tokenized()
 train_data.handling_emojis()
 train_data.handling_emoticons()
 train_data.pos_tagging()
-#train_data.sentiment()
-#train_data.create_vocabulary()
+train_data.sentiment()
+train_data.create_vocabulary()
 #train_data.uni_and_bigrams()
-#train_data.tweet_length_tokenized()
-#train_data.caps_counts()
-#train_data.same_letter_count()
-#train_data.ats_count()
-#train_data.exclamation_mark_count()
-#train_data.question_mark_count()
-#train_data.period_count()
-#train_data.find_consecutive_punctuation()
+train_data.caps_counts()
+train_data.same_letter_count()
+train_data.ats_count()
+train_data.exclamation_mark_count()
+train_data.question_mark_count()
+train_data.period_count()
+train_data.find_consecutive_punctuation()
 
 #pos matrix in self.pos_tags, not padded yet, we will have to see:)
 
-#train_data.create_classification_array()
-#train_data.create_feature_array()
+train_data.create_classification_array()
+train_data.create_feature_array()
+
+class_array_train = train_data.class_array
+feature_array_train = train_data.feature_array
+pos_array_train = train_data.pos_array
 
 
-#print(train_data.feature_array)
-#class_array_train = train_data.class_array
-#feature_array_train = train_data.feature_array
-
-
-
-'''# Example usage for test data:
-test_data = Preprocessing(testset)
-test_data.tokenizer()
-test_data.handling_emojis()
-test_data.handling_emoticons()
-test_data.sentiment()
-# Use the same vocabulary as in the training data
-# If you saved the vocabulary during training, load it here
-# Otherwise, use the vocabulary from the training data directly
-test_data.vocabulary = train_data.vocabulary
-test_data.tweet_length_tokenized()
-test_data.caps_counts()
-test_data.same_letter_count()
-test_data.ats_count()
-test_data.exclamation_mark_count()
-test_data.question_mark_count()
-test_data.period_count()
-test_data.find_consecutive_punctuation()
-test_data.create_classification_array()
-test_data.create_feature_array()
-
-class_array_test = test_data.class_array
-feature_array_test = test_data.feature_array'''
-
-#print(feature_array_train)
-
-
+combined_matrix = np.concatenate((feature_array_train, pos_array_train), axis=1)
+combined_tensor = torch.tensor(combined_matrix)
