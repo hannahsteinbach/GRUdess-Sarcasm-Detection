@@ -313,6 +313,11 @@ class Preprocessing:
                 elif token[0] in emoticons_dic.keys():
                     tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
+            progressBar.update(1)
+
+        progressBar.close()
+
+        # encode pos-labels
         for i, tweet in enumerate(self.dataset):
             pos_tags = tweet["posTagged_tweet"]
 
