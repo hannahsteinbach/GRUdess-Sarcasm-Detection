@@ -17,19 +17,18 @@ from extended_data import emoticons_dic, pos_tag_dict, OG_dataset, balanced_data
 import pandas as pd
 
 
-
-
 class Preprocessing:
     def __init__(self, dataset):
         self.analyzer = SentimentIntensityAnalyzer()
-        self.vocabulary = set()
-        self.pos_tags = []
+        self.vocabulary = None
+        self.bigrams = None
         self.dataset = dataset
-        self.bigrams = set()
         self.embeddings = []
-        self.feature_array = None
-        self.class_array = None
-        self.pos_array = None
+        self.feature_tensor= None
+        self.class_tensor = None
+        self.pos_tensor = None
+        self.unigram_tensor = None
+        self.bigram_tensor = None
 
     def tokenizer(self):
         """
@@ -65,42 +64,6 @@ class Preprocessing:
 
             progressBar.update(1)
 
-        progressBar.close()
-
-    def prepaded_tweet(self):
-        """
-        Function we can use as a base to encode feature
-        information later on.
-        Generates a list, for each tweet pre-padded to the
-        length of the longest tweet.
-
-        Input:
-        dataset (list)                      : List of dictionaries of each tweet.
-
-        Output:
-        dataset[tweet]["prePaddedVector"]
-                        (list)              : Pre-padded vector of the tweet based on the length of the
-                                                longest tweet in the dataset.
-                                                For OG: 117
-        """
-
-        # first iterate through all tweets to find longest tweet
-        longest_tweet = 1 # 117 for OG
-        for tweet in self.dataset:
-            len_of_tweet = len(tweet["tweetTokenized"])
-            if len_of_tweet > longest_tweet:
-                longest_tweet = len_of_tweet
-    
-        total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Initialize Pre-Paddings...")
-
-        # initialize padded vector filled with zeros
-        for tweet in self.dataset:
-
-            padded_vector = [0 for i in range(longest_tweet)]
-            tweet["prePaddedVector"] = padded_vector
-
-            progressBar.update(1)
         progressBar.close()
 
     def handling_emojis(self):
@@ -218,7 +181,7 @@ class Preprocessing:
                     # delete emoticon from other entry
                     tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
 
-                    #tweet["posTagged_tweet"][index] = (token, "EMOTICON")
+                    # tweet["posTagged_tweet"][index] = (token, "EMOTICON")
 
 
                 elif token == "XP":
@@ -243,7 +206,7 @@ class Preprocessing:
 
     def create_vocabulary(self):
         """
-            Function which creates the vocabulary for our data
+            Function which creates the vocabulary for our data, vocabulary of the train set will be used for both
 
             Output:
             Vocabulary attribute (self.vocabulary) for an object of the class
@@ -256,13 +219,47 @@ class Preprocessing:
 
         total_iterations = len(self.dataset)
         progressBar = tqdm(total=total_iterations, desc="Building Vocabulary...")
+        voc_dict = {}
+        ind = 2000
 
         for tweet in self.dataset:
             for token in tweet["tweetTokenized"]:
-                self.vocabulary.add(token)
-
+                if token not in voc_dict:
+                    voc_dict[token] = ind
+                    ind += 1
             progressBar.update(1)
         progressBar.close()
+
+        self.vocabulary = voc_dict
+
+    def create_bigrams(self):
+        """
+            Function which creates a dictionary of bigrams in our data.
+
+            Output:
+            Bigram attribute (self.bigram) for an object of the class.
+
+            The bigram dictionary of the train set will be used for both, train and test sets.
+
+        """
+
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Building Vocabulary...")
+        bigram_dict = {}
+        ind = 20000
+
+        for tweet in self.dataset:
+            tokenizedTweet = tweet["tweetTokenized"]
+            for i in range(len(tokenizedTweet) - 1):
+                bigram = tokenizedTweet[i] + " " + tokenizedTweet[i + 1]
+                if bigram not in bigram_dict:
+                    bigram_dict[bigram] = ind
+                    ind += 1
+            progressBar.update(1)
+        progressBar.close()
+
+        self.bigrams = bigram_dict
+
 
     def pos_tagging(self):
         """
@@ -272,10 +269,10 @@ class Preprocessing:
         1. dataset (list)   :   A list of dictionaries.
 
         Output:
-        None
+        Fills self.pos_tag_tensor, a tensor that contains the encoded POS-tag per token per tweet.
         """
         num_rows = len(self.dataset)
-        num_cols = max(tweet["tweetTokenizedLength"] for tweet in self.dataset)
+        num_cols = 150
 
         pos_array = np.zeros((num_rows, num_cols), dtype=int)
 
@@ -313,11 +310,6 @@ class Preprocessing:
                 elif token[0] in emoticons_dic.keys():
                     tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
-            progressBar.update(1)
-
-        progressBar.close()
-
-        # encode pos-labels
         for i, tweet in enumerate(self.dataset):
             pos_tags = tweet["posTagged_tweet"]
 
@@ -331,7 +323,8 @@ class Preprocessing:
 
         progressBar.close()
 
-        self.pos_array = pos_array
+        self.pos_tensor = torch.tensor(pos_array)
+
 
     def sentiment(self):
         """
@@ -357,10 +350,9 @@ class Preprocessing:
 
         progressBar.close()
 
-    def uni_and_bigrams(self):
+    def create_uni_bigram_tensor(self):
         """
-        Function to create unigrams and bigrams, their encodings, tweets with the
-        respective encodings and based on that pre-padded feature tensors for
+        Function to create tweets with the encodings for unigrams and bigrams and based on that pre-padded feature tensors for
         unigram-feature and bigram-feature.
 
         Input:
@@ -369,78 +361,53 @@ class Preprocessing:
                                 information need to create unigram and bigram sets.
 
         Output:
-        1. tweet["tweetBigrams"] (list)         : Tweet represented as bigrams.
-        2. tweet["tweetUnigramsEncoded"] list() : Tweet with encoded unigrams.
-        3. tweet["tweetBigramsEncoded"]         : Tweet with encoded bigrams.
-        4. tweet["tweetUnigramFeatureTensor"]   
-                (tensor)                        : Unigram feature Tensor of the tweet.
-                                                    in length of longest tweet filled 
-                                                    with the encoded unigram
-                                                    information pf thr tweet.
-                                                    Example:
-                                                    "I like cake .", max_tweet_len = 7:
-                                                    [0 0 0 1 2 3 4]
-        5. tweet["tweetBigramFeatureTensor"]   
-                (tensor)                        : Bigram feature Tensor of the tweet.
-                                                    Similar to 
+        1. tweet["tweetUnigramsEncoded"]        : Tweet with encoded unigrams.
+        2. tweet["tweetBigramsEncoded"]         : Tweet with encoded bigrams.
         """
         total_iterations = len(self.dataset)
 
-        # set of all unigrams is equivalent to vocabulary
-        unigrams = self.vocabulary
+        num_rows = len(self.dataset)
+        num_cols = 150
 
-        # create set of all bigrams
+        unigram_array = np.zeros((num_rows, num_cols), dtype=int)
+        bigram_array = np.zeros((num_rows, num_cols), dtype=int)
+
         progressBar = tqdm(total=total_iterations, desc="Creating Bigrams...")
 
-        for tweet in self.dataset:
-            tokenizedTweet = tweet["tweetTokenized"]
-
-            # bigrams are consecutive tokens separated by a whitespace
-            bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
-            tweet["tweetBigrams"] = bigram
-            self.bigrams.update(bigram)
-
-            progressBar.update(1)
-        progressBar.close()
-
-        # encode unigrams
-        # 49 is from the length of the pos_tag_dict, a constant 
-        unigrams_encoded = {unigram: 49+index+1 for index, unigram in enumerate(unigrams)}
-
-        # encode bigrams
-        bigrams_encoded = {bigram: 49+len(unigrams_encoded)+index+1 for index, bigram in enumerate(self.bigrams)}
-
-        progressBar = tqdm(total=total_iterations, desc="Encode Unigrams and Bigrams...")
-
         # create encoded tweets as unigrams and bigrams
-        for tweet in self.dataset:
-            # first encode the whole tweet in unigram and bigram
-            tweet["tweetUnigramsEncoded"] = [unigrams_encoded[token] for token in tweet["tweetTokenized"]]
-            tweet["tweetBigramsEncoded"] = [bigrams_encoded[bigram] for bigram in tweet["tweetBigrams"]]
+        for i, tweet in enumerate(self.dataset):
+            tweet_unigrams_encoded = []
+            tweet_bigrams_encoded = []
 
-            # copy prepadded list 
-            tweet["tweetUnigramFeatureList"] = tweet["prePaddedVector"].copy()
-            tweet["tweetBigramFeatureList"] = tweet["prePaddedVector"].copy()
+            for token in tweet["tweetTokenized"]:
+                if token in self.vocabulary:
+                    tweet_unigrams_encoded.append(self.vocabulary[token])
+                else:
+                    tweet_unigrams_encoded.append(-1) #handle OOV unigrams
 
-            # replace values within the prepadded lists
-            # --> create encoded, prepadded feature tensors for uni- & bigrams
-            counter = -1
-            for encoded_unigram in reversed(tweet["tweetUnigramsEncoded"]):
-                tweet["tweetUnigramFeatureList"][counter] = encoded_unigram
-                counter -= 1
-                # change list into tensor
-                tweet["tweetUnigramFeatureTensor"] = torch.Tensor(tweet["tweetUnigramFeatureList"])
+            for j in range(len(tweet["tweetTokenized"]) - 1):
+                bigram = tweet["tweetTokenized"][j] + " " + tweet["tweetTokenized"][j + 1]
+                if bigram in self.bigrams:
+                    tweet_bigrams_encoded.append(self.bigrams[bigram]) #handle OOV bigrams
+                else:
+                    tweet_bigrams_encoded.append(-2)
 
-            counter = -1
-            for encoded_bigram in reversed(tweet["tweetBigramsEncoded"]):
-                tweet["tweetBigramFeatureList"][counter] = encoded_bigram
-                counter -= 1
-                # change list into tensor
-                tweet["tweetBigramFeatureTensor"] = torch.Tensor(tweet["tweetBigramFeatureList"])
-        
+            tweet["tweetUnigramsEncoded"] = tweet_unigrams_encoded
+            tweet["tweetBigramsEncoded"] = tweet_bigrams_encoded
+
+            distance_uni = num_cols - len(tweet["tweetUnigramsEncoded"]) #pre-padding
+            for j, token_id in enumerate(tweet_unigrams_encoded): #fill in the matrix correspondingly
+                unigram_array[i, j + distance_uni] = token_id
+
+            distance_bi = num_cols - len(tweet["tweetBigramsEncoded"])
+            for j, bigram_id in enumerate(tweet_bigrams_encoded):
+                bigram_array[i, j + distance_bi] = bigram_id
             progressBar.update(1)
 
         progressBar.close()
+
+        self.unigram_tensor = torch.tensor(unigram_array)
+        self.bigram_tensor = torch.tensor(bigram_array)
 
     def tweet_length_tokenized(self):
         """
@@ -573,6 +540,7 @@ class Preprocessing:
         # load pre-trained model
         # wv = api.load("glove-twitter-100")
         wv = api.load("word2vec-google-news-300")
+
         # save the vectors
         # wv.save("./used_models/vectors.kv")
         # wv = "./data/vectors.kv"
@@ -608,7 +576,7 @@ class Preprocessing:
                     # counter += 1
                     # wv_res += wv[token]
                     # tweet["tweetTokenEmbeddings"].append(wv_res)
-                elif token in emoji_emb_dict.keys(): # what about tokens where 2+ emojis occur????
+                elif token in emoji_emb_dict.keys():  # what about tokens where 2+ emojis occur????
                     tweet["embeddings"].append(emoji_emb_dict[token])
                 else:
                     tweet["embeddings"].append(None)
@@ -744,14 +712,16 @@ class Preprocessing:
 
         progressBar.close()
 
-    def create_feature_array(self):
-        '''Creates a feature matrix for the dataset object and fills the self.feature_array attribute.'''
+    def create_feature_tensor(self):
+        '''Creates a feature tensor for the dataset object and fills the self.feature_tensor attribute.'''
         df = pd.DataFrame(self.dataset)
         features = df.drop(columns=[
             "class",
             "tweetText",
             "tweetTokenized",
             "posTagged_tweet",
+            "tweetUnigramsEncoded",
+            "tweetBigramsEncoded",
             "emoticons",
             "emoticons_description",
             "tweetWithoutEmojicon",
@@ -759,14 +729,13 @@ class Preprocessing:
             "emojis_description",
             "emojis"
         ])
-        self.feature_array = features.values
+        self.feature_tensor = torch.tensor(features.values, dtype=torch.float32)
 
-    def create_classification_array(self):
-        '''Creates a classification matrix for the dataset object and fills the self.class_array attribute.'''
+    def create_classification_tensor(self):
+        '''Creates a classification tensor for the dataset object and fills the self.class_tensor attribute.'''
         df = pd.DataFrame(self.dataset)
         class_pd = df["class"]
-        self.class_array = class_pd.values
-
+        self.class_tensor = torch.tensor(class_pd.values)
 
 
 train_data = Preprocessing(OG_dataset)
@@ -776,8 +745,6 @@ train_data.handling_emojis()
 train_data.handling_emoticons()
 train_data.pos_tagging()
 train_data.sentiment()
-train_data.create_vocabulary()
-#train_data.uni_and_bigrams()
 train_data.caps_counts()
 train_data.same_letter_count()
 train_data.ats_count()
@@ -786,23 +753,35 @@ train_data.question_mark_count()
 train_data.period_count()
 train_data.find_consecutive_punctuation()
 
-#pos matrix in self.pos_tags, not padded yet, we will have to see:)
-
-train_data.create_classification_array()
-train_data.create_feature_array()
-
-class_array_train = train_data.class_array
-feature_array_train = train_data.feature_array
-pos_array_train = train_data.pos_array
-
-feature_array_train = feature_array_train.astype(np.float32)
-feature_tensor = torch.tensor(feature_array_train)
-
-pos_array_train = pos_array_train.astype(np.float32)
-
-combined_matrix = np.concatenate((feature_array_train, pos_array_train), axis=1)
+train_data.create_vocabulary()
+train_data.create_bigrams()
+train_data.create_uni_bigram_tensor()
 
 
-combined_tensor_train = torch.tensor(combined_matrix)
-class_tensor_train = torch.tensor(class_array_train)
+'''
+test_data = Preprocessing(testset)
+test_data.tokenizer()
+test_data.tweet_length_tokenized()
+test_data.handling_emojis()
+test_data.handling_emoticons()
+#test_data.pos_tagging()
+train_data.sentiment()
+test_data.vocabulary = train_data.vocabulary
+test_data.bigrams = train_data.bigrams
+test_data.create_uni_bigram_array()
+print(test_data.unigram_array)
+print(test_data.bigram_array)
+'''
+#print(test_data.dataset)
 
+train_data.create_classification_tensor()
+train_data.create_feature_tensor()
+train_data.create_feature_tensor()
+
+class_tensor_train = train_data.class_tensor
+feature_tensor_train = train_data.feature_tensor
+pos_tensor_train = train_data.pos_tensor
+unigram_tensor_train = train_data.unigram_tensor
+bigram_tensor_train = train_data.bigram_tensor
+
+combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train), dim=1)
