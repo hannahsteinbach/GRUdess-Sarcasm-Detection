@@ -225,7 +225,7 @@ class Preprocessing:
         for tweet in self.dataset:
             for token in tweet["tweetTokenized"]:
                 if token not in voc_dict:
-                    voc_dict[token] = ind
+                    voc_dict[token.lower()] = ind
                     ind += 1
             progressBar.update(1)
         progressBar.close()
@@ -251,7 +251,7 @@ class Preprocessing:
         for tweet in self.dataset:
             tokenizedTweet = tweet["tweetTokenized"]
             for i in range(len(tokenizedTweet) - 1):
-                bigram = tokenizedTweet[i] + " " + tokenizedTweet[i + 1]
+                bigram = tokenizedTweet[i].lower() + " " + tokenizedTweet[i + 1].lower()
                 if bigram not in bigram_dict:
                     bigram_dict[bigram] = ind
                     ind += 1
@@ -380,13 +380,13 @@ class Preprocessing:
             tweet_bigrams_encoded = []
 
             for token in tweet["tweetTokenized"]:
-                if token in self.vocabulary:
-                    tweet_unigrams_encoded.append(self.vocabulary[token])
+                if token.lower() in self.vocabulary:
+                    tweet_unigrams_encoded.append(self.vocabulary[token.lower()])
                 else:
                     tweet_unigrams_encoded.append(-1) #handle OOV unigrams
 
             for j in range(len(tweet["tweetTokenized"]) - 1):
-                bigram = tweet["tweetTokenized"][j] + " " + tweet["tweetTokenized"][j + 1]
+                bigram = tweet["tweetTokenized"][j].lower() + " " + tweet["tweetTokenized"][j + 1].lower()
                 if bigram in self.bigrams:
                     tweet_bigrams_encoded.append(self.bigrams[bigram]) #handle OOV bigrams
                 else:
@@ -783,5 +783,6 @@ feature_tensor_train = train_data.feature_tensor
 pos_tensor_train = train_data.pos_tensor
 unigram_tensor_train = train_data.unigram_tensor
 bigram_tensor_train = train_data.bigram_tensor
+
 
 combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train), dim=1)
