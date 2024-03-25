@@ -1,6 +1,8 @@
 import numpy as np
 import torch
 import torch.nn as nn
+import torch.optim as optim
+from focalloss import class_weights, FocalLoss
 from torch.utils.data import Dataset, DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from preprocessing import combined_tensor_train, class_tensor_train
@@ -16,10 +18,11 @@ class GRUDESS(nn.Module):
         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
         # x -> batch_size, sequence_len, input_size
 
-        self.fc = nn.Linear(hidden_size*2, num_classes) # 2 for bidirectional
+        self.fc = nn.Linear(hidden_size * 2, num_classes)  # 2 for bidirectional
 
     def forward(self, x):
-        h0 = torch.zeros(self.num_layers*2, x.size(0), self.hidden_size).to(device)  # x.size(0) = batch_size; *2 for bidirectional
+        h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(
+            device)  # x.size(0) = batch_size; *2 for bidirectional
 
         # call rnn model
         out, _ = self.gru(x, h0)  # (N, 1, 128)
@@ -30,18 +33,19 @@ class GRUDESS(nn.Module):
         out = self.fc(out)
         return out
 
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def run_grudess_CV(train_dataset,
                    class_tensor_train,
-                    num_layers,
-                    hidden_size,
-                    num_classes,
-                    num_epochs,
-                    batch_size,
-                    learning_rate,
-                    k):
-    
+                   num_layers,
+                   hidden_size,
+                   num_classes,
+                   num_epochs,
+                   batch_size,
+                   learning_rate,
+                   k):
     all_precision_scores = list()
     all_recall_scores = list()
     all_f1_scores = []
@@ -51,15 +55,13 @@ def run_grudess_CV(train_dataset,
     sequence_len = 1
     num_classes = 2
 
-
     # Data sets
     train_dataset = TensorDataset(combined_tensor_train,
-                                class_tensor_train)
+                                  class_tensor_train)
 
     # include k-fold Cross Validation
     skf = StratifiedKFold(n_splits=k,
-            shuffle=True)
-
+                          shuffle=True)
 
     # Train the model
 
@@ -75,9 +77,9 @@ def run_grudess_CV(train_dataset,
             "train_sarcasm": 0,
             "val_sarcasm": 0,
             "tp": 0,
-            "fp":0,
-            "fn":0,
-            "tn":0,
+            "fp": 0,
+            "fn": 0,
+            "tn": 0,
             "precision": 0,
             "recall": 0,
             "f1_scores": list()
@@ -85,25 +87,29 @@ def run_grudess_CV(train_dataset,
 
         # subset dataset based on folds
         train_subset = Subset(train_dataset,
-                            train_index)
+                              train_index)
         val_subset = Subset(train_dataset,
                             val_index)
 
         # create dataloader
         train_loader = DataLoader(train_subset,
-                                batch_size=batch_size,
-                                shuffle=True)
+                                  batch_size=batch_size,
+                                  shuffle=True)
         val_loader = DataLoader(val_subset,
                                 batch_size=batch_size,
                                 shuffle=True)
 
+        weights = torch.FloatTensor(class_weights(class_tensor_train))
+
         model = GRUDESS(input_size, hidden_size, num_layers, num_classes).to(device)
 
-        criterion = nn.CrossEntropyLoss()
+        criterion = FocalLoss(alpha=weights, gamma=2)
+        # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
         optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
         for epoch in range(num_epochs):
             model.train()
+            loss_e = 0
             for i, (tweets, labels) in enumerate(train_loader):
                 # want size [batch, seq, input]
                 # -> 25, 1, 13
@@ -117,6 +123,7 @@ def run_grudess_CV(train_dataset,
                 # forward pass
                 outputs = model(tweets)
                 loss = criterion(outputs, labels)
+                loss_e += loss.item()
                 folds_values[fold]["losses"].append(loss)
 
                 # backward and optimization
@@ -125,7 +132,11 @@ def run_grudess_CV(train_dataset,
                 optimizer.step()
 
                 if (i + 1) % 100 == 0:
-                    print(f"Epoch {epoch + 1}/{num_epochs}")
+                    print(f"Epoch {epoch + 1}/{num_epochs}, Batch {i + 1}, Loss: {loss.item()}")
+
+                    # Print the average loss for the epoch
+            average_epoch_loss = loss_e / len(train_loader)
+            print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_epoch_loss}")
 
         model.eval()
         n_correct = 0
@@ -207,11 +218,11 @@ learning_rate = 0.0001
 k = 3
 
 run_grudess_CV(train_dataset,
-                   class_tensor_train,
-                    num_layers,
-                    hidden_size,
-                    num_classes,
-                    num_epochs,
-                    batch_size,
-                    learning_rate,
-                    k)
+               class_tensor_train,
+               num_layers,
+               hidden_size,
+               num_classes,
+               num_epochs,
+               batch_size,
+               learning_rate,
+               k)
