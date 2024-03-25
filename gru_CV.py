@@ -13,7 +13,7 @@ class GRUDESS(nn.Module):
         super(GRUDESS, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
-        self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True)
+        self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
         # x -> batch_size, sequence_len, input_size
 
         self.fc = nn.Linear(hidden_size, num_classes)
