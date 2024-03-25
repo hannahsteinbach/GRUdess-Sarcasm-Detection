@@ -2,7 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from focalloss import class_weights, FocalLoss
+from focal_loss import class_weights, FocalLoss
 from torch.utils.data import Dataset, DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from preprocessing import combined_tensor_train, class_tensor_train
