@@ -277,9 +277,6 @@ class Preprocessing:
 
         pos_array = np.zeros((num_rows, num_cols), dtype=int)
 
-        total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
-
         # Load model
         model = "./data/english_newspaper_2017-09-15.model"
 
@@ -288,6 +285,9 @@ class Preprocessing:
         asptagger = ASPTagger()
         asptagger.load(model)
         print("Loaded PoS tagger.")
+
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
 
         # Go through dataset to get tokenized text
         for tweet in self.dataset:
@@ -311,6 +311,10 @@ class Preprocessing:
                 elif token[0] in emoticons_dic.keys():
                     tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
+            progressBar.update(1)
+
+        progressBar.close()
+
         for i, tweet in enumerate(self.dataset):
             pos_tags = tweet["posTagged_tweet"]
 
@@ -319,10 +323,6 @@ class Preprocessing:
             # Fill pos_array with pos_tag_dict indices
             for j, (token, tag) in enumerate(pos_tags):
                 pos_array[i, j + distance] = pos_tag_dict[tag]
-
-            progressBar.update(1)
-
-        progressBar.close()
 
         self.pos_tensor = torch.tensor(pos_array)
 
