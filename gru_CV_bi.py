@@ -2,12 +2,12 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from focalloss import class_weights, FocalLoss
-from torch.utils.data import Dataset, DataLoader, TensorDataset, Subset
+from focal_loss import class_weights, FocalLoss
+from torch.utils.data import  DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from preprocessing import combined_tensor_train, class_tensor_train
-from sklearn.model_selection import KFold, StratifiedKFold
+from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score, precision_score, recall_score
 
 
@@ -258,7 +258,7 @@ hidden_size = 128
 num_classes = 2
 num_epochs = 25
 batch_size = 50
-learning_rate = 0.01
+learning_rate = 0.001
 k = 3
 max_grad_norm = 5
 
