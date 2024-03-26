@@ -1,10 +1,12 @@
 from tqdm import tqdm
+import torch
 import csv
 from somajo import SoMaJo
 from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
+import torch
 import html
 import gensim
 from gensim.models import word2vec
@@ -15,17 +17,19 @@ from extended_data import emoticons_dic, pos_tag_dict, OG_dataset, balanced_data
 import pandas as pd
 
 
-
 class Preprocessing:
     def __init__(self, dataset):
         self.analyzer = SentimentIntensityAnalyzer()
-        self.vocabulary = set()
-        self.pos_tags = []
+        self.vocabulary = None
+        self.bigrams = None
         self.dataset = dataset
-        self.bigrams = set()
         self.embeddings = []
-        self.feature_array = None
-        self.class_array = None
+        self.feature_tensor= None
+        self.class_tensor = None
+        self.pos_tensor = None
+        self.unigram_tensor = None
+        self.bigram_tensor = None
+        self.valence_tensor = None
 
     def tokenizer(self):
         """
@@ -178,7 +182,7 @@ class Preprocessing:
                     # delete emoticon from other entry
                     tweet["tweetWithoutEmojicon"] = tweet["tweetWithoutEmojicon"].replace(token, "")
 
-                    #tweet["posTagged_tweet"][index] = (token, "EMOTICON")
+                    # tweet["posTagged_tweet"][index] = (token, "EMOTICON")
 
 
                 elif token == "XP":
@@ -203,7 +207,7 @@ class Preprocessing:
 
     def create_vocabulary(self):
         """
-            Function which creates the vocabulary for our data
+            Function which creates the vocabulary for our data, vocabulary of the train set will be used for both
 
             Output:
             Vocabulary attribute (self.vocabulary) for an object of the class
@@ -216,13 +220,47 @@ class Preprocessing:
 
         total_iterations = len(self.dataset)
         progressBar = tqdm(total=total_iterations, desc="Building Vocabulary...")
+        voc_dict = {}
+        ind = 2000
 
         for tweet in self.dataset:
             for token in tweet["tweetTokenized"]:
-                self.vocabulary.add(token)
-
+                if token not in voc_dict:
+                    voc_dict[token.lower()] = ind
+                    ind += 1
             progressBar.update(1)
         progressBar.close()
+
+        self.vocabulary = voc_dict
+
+    def create_bigrams(self):
+        """
+            Function which creates a dictionary of bigrams in our data.
+
+            Output:
+            Bigram attribute (self.bigram) for an object of the class.
+
+            The bigram dictionary of the train set will be used for both, train and test sets.
+
+        """
+
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Building Bigrams...")
+        bigram_dict = {}
+        ind = 20000
+
+        for tweet in self.dataset:
+            tokenizedTweet = tweet["tweetTokenized"]
+            for i in range(len(tokenizedTweet) - 1):
+                bigram = tokenizedTweet[i].lower() + " " + tokenizedTweet[i + 1].lower()
+                if bigram not in bigram_dict:
+                    bigram_dict[bigram] = ind
+                    ind += 1
+            progressBar.update(1)
+        progressBar.close()
+
+        self.bigrams = bigram_dict
+
 
     def pos_tagging(self):
         """
@@ -230,40 +268,38 @@ class Preprocessing:
 
         Input:
         1. dataset (list)   :   A list of dictionaries.
-                                FURTHER INFO TO BE ADDED
 
         Output:
-        TO BE DETERMINED
+        Fills self.pos_tag_tensor, a tensor that contains the encoded POS-tag per token per tweet (pre-padded).
         """
+        num_rows = len(self.dataset)
+        num_cols = 150
+
+        pos_array = np.zeros((num_rows, num_cols), dtype=int)
+
         total_iterations = len(self.dataset)
         progressBar = tqdm(total=total_iterations, desc="POS-Tagging...")
 
-        # load model
+        # Load model
         model = "./data/english_newspaper_2017-09-15.model"
 
-        """
-        # example sentences
-        sentences = [["Ein", "Satz", "ist", "eine", "Liste", "von", "Tokens", "."],
-                 ["Zeitfliegen", "mögen", "einen", "Pfeil", "."]]
-        """
-        # create object for pos tagger
+        # Create object for pos tagger
         print("Loading PoS tagger...")
         asptagger = ASPTagger()
         asptagger.load(model)
         print("Loaded PoS tagger.")
 
-        # go through dataset to get tokenized text
+        # Go through dataset to get tokenized text
         for tweet in self.dataset:
-            one_hot_encoded = []
             tokenized_tweet = [tweet["tweetTokenized"]]
 
-            # take the sentence & pos tag it
+            # Tag the sentence with POS
             for sentence in tokenized_tweet:
                 tagged_sentence = asptagger.tag_sentence(sentence)
                 posTagged_tweet = tagged_sentence
 
-                # create new dictionary key
-                tweet["posTagged_tweet"] = posTagged_tweet  # change this
+                # Create new dictionary key
+                tweet["posTagged_tweet"] = posTagged_tweet
 
             for index, token in enumerate(tweet["posTagged_tweet"]):
                 if token[0][0] == "@":
@@ -275,17 +311,20 @@ class Preprocessing:
                 elif token[0] in emoticons_dic.keys():
                     tweet["posTagged_tweet"][index] = (token[0], "EMOTICON")
 
-            for (token, pos) in tweet["posTagged_tweet"]:
-                    # Initialize one-hot vector with zeros
-                vector = [0] * len(pos_tag_dict)
-                    # Set the index corresponding to the POS tag to 1
-                vector[pos_tag_dict[pos]] = 1
-                one_hot_encoded.append(vector)
-            self.pos_tags.append(one_hot_encoded)
-            progressBar.close()
+        for i, tweet in enumerate(self.dataset):
+            pos_tags = tweet["posTagged_tweet"]
+
+            distance = num_cols - len(tweet["posTagged_tweet"])
+
+            # Fill pos_array with pos_tag_dict indices
+            for j, (token, tag) in enumerate(pos_tags):
+                pos_array[i, j + distance] = pos_tag_dict[tag]
+
             progressBar.update(1)
 
         progressBar.close()
+
+        self.pos_tensor = torch.tensor(pos_array)
 
 
     def sentiment(self):
@@ -312,10 +351,10 @@ class Preprocessing:
 
         progressBar.close()
 
-
-    def uni_and_bigrams(self):
+    def create_uni_bigram_tensor(self):
         """
-        Function to create unigrams and bigrams.
+        Function to create tweets with the encodings for unigrams and bigrams and based on that pre-padded feature tensors for
+        unigram-feature and bigram-feature.
 
         Input:
         1. dataset (list)  :   A list of dictionaries.
@@ -323,57 +362,53 @@ class Preprocessing:
                                 information need to create unigram and bigram sets.
 
         Output:
-        1. dataset (list)  :   Modified dataset with unigrams and bigrams indicators (including this in the dataset for now).
+        1. tweet["tweetUnigramsEncoded"]        : Tweet with encoded unigrams.
+        2. tweet["tweetBigramsEncoded"]         : Tweet with encoded bigrams.
         """
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Creating unigrams and bigrams...")
 
-        # set of all unigrams is equivalent to vocabulary
-        unigrams = self.vocabulary
+        num_rows = len(self.dataset)
+        num_cols = 150
 
-        # create set of all bigrams
-        for tweet in self.dataset:
-            tokenizedTweet = tweet["tweetTokenized"]
+        unigram_array = np.zeros((num_rows, num_cols), dtype=int)
+        bigram_array = np.zeros((num_rows, num_cols), dtype=int)
 
-            # bigrams are consecutive tokens separated by a whitespace
-            bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
-            self.bigrams.update(bigram)
+        progressBar = tqdm(total=total_iterations, desc="Creating Bigrams...")
 
-        # we use binary indicators for unigrams and bigrams (to check whether they are present in a tweet or not)
-        for tweet in self.dataset:
-            tokenizedTweet = tweet["tweetTokenized"]
-            bigram = [tokenizedTweet[i] + " " + tokenizedTweet[i + 1] for i in range(len(tokenizedTweet) - 1)]
+        # create encoded tweets as unigrams and bigrams
+        for i, tweet in enumerate(self.dataset):
+            tweet_unigrams_encoded = []
+            tweet_bigrams_encoded = []
 
-            # create one-hot encoded unigram vector for each tweet
-            unigramsIndicators = []
-
-            for unigram in unigrams:
-                if unigram in tokenizedTweet:
-                    unigramsIndicators.append(1)
-                    tweet[str(unigram)] = 1
+            for token in tweet["tweetTokenized"]:
+                if token.lower() in self.vocabulary:
+                    tweet_unigrams_encoded.append(self.vocabulary[token.lower()])
                 else:
-                    unigramsIndicators.append(0)
-                    tweet[str(unigram)] = 0
+                    tweet_unigrams_encoded.append(-1) #handle OOV unigrams
 
-
-                    # update unigram vector for each tweet
-            tweet["unigrams "] = unigramsIndicators
-
-            # create one-hot encoded bigram vector for each tweet
-            bigramsIndicators = []
-
-            for bigram in self.bigrams:
-                if bigram in tweet["tweetText"]:
-                    bigramsIndicators.append(1)
+            for j in range(len(tweet["tweetTokenized"]) - 1):
+                bigram = tweet["tweetTokenized"][j].lower() + " " + tweet["tweetTokenized"][j + 1].lower()
+                if bigram in self.bigrams:
+                    tweet_bigrams_encoded.append(self.bigrams[bigram]) #handle OOV bigrams
                 else:
-                    bigramsIndicators.append(0)
+                    tweet_bigrams_encoded.append(-2)
 
-            # update bigram vector for each tweet
-            tweet["bigrams"] = bigramsIndicators
+            tweet["tweetUnigramsEncoded"] = tweet_unigrams_encoded
+            tweet["tweetBigramsEncoded"] = tweet_bigrams_encoded
+
+            distance_uni = num_cols - len(tweet["tweetUnigramsEncoded"]) #pre-padding
+            for j, token_id in enumerate(tweet_unigrams_encoded): #fill in the matrix correspondingly
+                unigram_array[i, j + distance_uni] = token_id
+
+            distance_bi = num_cols - len(tweet["tweetBigramsEncoded"])
+            for j, bigram_id in enumerate(tweet_bigrams_encoded):
+                bigram_array[i, j + distance_bi] = bigram_id
             progressBar.update(1)
 
         progressBar.close()
 
+        self.unigram_tensor = torch.tensor(unigram_array)
+        self.bigram_tensor = torch.tensor(bigram_array)
 
     def tweet_length_tokenized(self):
         """
@@ -396,7 +431,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-
 
     def caps_counts(self):
         """
@@ -453,7 +487,6 @@ class Preprocessing:
 
             progressBar.close()
 
-
     def same_letter_count(self):
         """
         Function to calculate the number of words in each tweet that contain more than 2 consecutively repeating letters.
@@ -489,7 +522,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def include_2vec(self):
         """
             Function to include word2vec word embeddings.
@@ -509,6 +541,7 @@ class Preprocessing:
         # load pre-trained model
         # wv = api.load("glove-twitter-100")
         wv = api.load("word2vec-google-news-300")
+
         # save the vectors
         # wv.save("./used_models/vectors.kv")
         # wv = "./data/vectors.kv"
@@ -544,7 +577,7 @@ class Preprocessing:
                     # counter += 1
                     # wv_res += wv[token]
                     # tweet["tweetTokenEmbeddings"].append(wv_res)
-                elif token in emoji_emb_dict.keys(): # what about tokens where 2+ emojis occur????
+                elif token in emoji_emb_dict.keys():  # what about tokens where 2+ emojis occur????
                     tweet["embeddings"].append(emoji_emb_dict[token])
                 else:
                     tweet["embeddings"].append(None)
@@ -555,7 +588,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-
 
     def question_mark_count(self):
         """
@@ -582,7 +614,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def exclamation_mark_count(self):
         """
         Function to add a feature representing the number of exclamation marks in each tweet.
@@ -607,7 +638,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-
 
     def period_count(self):
         """
@@ -634,7 +664,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def find_consecutive_punctuation(self):
         """
         Function to find consecutive punctuation in one tweet.
@@ -657,7 +686,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-
 
     def ats_count(self):
         """
@@ -685,8 +713,7 @@ class Preprocessing:
 
         progressBar.close()
 
-
-    def token_valence(self): # note: this is not used as a feature, but simply a helper function
+    def create_valence_tensor(self):  # note: this is not used as a feature, but simply a helper function
         """
         Function to obtain the valence of each token in each tweet.
 
@@ -695,42 +722,65 @@ class Preprocessing:
 
         Output:
         dataset (list)  :   The input dataset with an additional 'tokenValence' feature.
+        Fills self.pos_tag_tensor, a tensor that contains the encoded valence per token per tweet (pre-padded).
+        -10 is positive, -15 neutral and -20 negative.
 
         Note: the below thresholds are based on the following:
-        "It is also useful for researchers who would like to set 
-        standardized thresholds for classifying sentences as either 
-        positive, neutral, or negative. Typical threshold values 
+        "It is also useful for researchers who would like to set
+        standardized thresholds for classifying sentences as either
+        positive, neutral, or negative. Typical threshold values
         (used in the literature cited on this page) are:
 
         positive sentiment: compound score >= 0.05
         neutral sentiment: (compound score > -0.05) and (compound score < 0.05)
         negative sentiment: compound score <= -0.05"
         """
-        
-    
-        for tweet in self.dataset:
-            tweetTokens= tweet["tweetTokenized"]
-        
+        total_iterations = len(self.dataset)
+
+        num_rows = len(self.dataset)
+        num_cols = 150
+
+        valence_array = np.zeros((num_rows, num_cols), dtype=int)
+
+        progressBar = tqdm(total=total_iterations, desc="Checking Valence...")
+
+        for i, tweet in enumerate(self.dataset):
+            tweetTokens = tweet["tweetTokenized"]
+
             # classify each token as positive, negative, or neutral
             tokenValence = []
+            encoded_valence = []
             for token in tweetTokens:
                 # getting the sentiment score of each token using VADER again
                 sentiment_score = self.analyzer.polarity_scores(token)
                 # classify token as positive, negative, or neutral based on compound score
                 if sentiment_score["compound"] >= 0.05:
-                    sentiment = "Positive"
+                    sentiment = "positive"
                 elif sentiment_score["compound"] <= -0.05:
-                    sentiment = "Negative"
+                    sentiment = "negative"
                 else:
-                    sentiment = "Neutral"
+                    sentiment = "neutral"
                 tokenValence.append(sentiment)
+
             tweet["tokenValence"] = tokenValence
 
+            distance = num_cols - len(tweet["tokenValence"])
+            # Update valence_array based on tokenValence
+            for j, valence in enumerate(tweet["tokenValence"]):
+                if valence == "positive":
+                    valence_array[i, j + distance] = -10
+                elif valence == "negative":
+                    valence_array[i, j + distance] = -20
+                else:
+                    valence_array[i, j + distance] = -15
+
+            progressBar.update(1)
+        self.valence_tensor = torch.tensor(valence_array)
 
     def detect_hyperbole(self):
         """
-        Function that indicates the presence or absence of a hyperbole in a each tweet, where 
-        hyperbole is defined as a streak of 3 or more consecutive positive or 3 or more 
+        Function that indicates the presence or absence of a hyperbole in a each tweet, where
+        hyperbole is defined as a streak of 3 or more consecutive positive or 3 or more
         consecutive negative words in each tweet.
 
         Input:
@@ -745,19 +795,19 @@ class Preprocessing:
         for tweet in self.dataset:
             tokenVals = tweet["tokenValence"]
             hyperbole = 0
-            for tokenVal in range(len(tokenVals)-2):
+            for tokenVal in range(len(tokenVals) - 2):
                 if tokenVals[tokenVal] == "Positive":
-                    if tokenVals[tokenVal+1] == "Positive" and tokenVals[tokenVal+2] == "Positive":
+                    if tokenVals[tokenVal + 1] == "Positive" and tokenVals[tokenVal + 2] == "Positive":
                         hyperbole = 1
                 if tokenVals[tokenVal] == "Negative":
-                    if tokenVals[tokenVal+1] == "Negative" and tokenVals[tokenVal+2] == "Negative":
+                    if tokenVals[tokenVal + 1] == "Negative" and tokenVals[tokenVal + 2] == "Negative":
                         hyperbole = 1
             tweet["hyperbole"] = hyperbole
 
-
-    def valence_before_repeating_punctuation(self): # note: check tokenization... this assumes that repeating punctuation is interpreted as a single token
+    def valence_before_repeating_punctuation(
+            self):  # note: check tokenization... this assumes that repeating punctuation is interpreted as a single token
         """
-        Function that detects repetitions of at least two exclamation marks, question marks, periods, 
+        Function that detects repetitions of at least two exclamation marks, question marks, periods,
         or any combinations of these, and then checks whether the previous 4 words contain at least one
         positive (but no negative words) or at least one negative word (but no positive words).
 
@@ -775,7 +825,7 @@ class Preprocessing:
             tweet["punctuationAndValence"] = 0
             for i, token in enumerate(tweet["tweetTokenized"]):
                 if i < len(tweet["tweetTokenized"]) and punctuation.findall(tweet["tweetTokenized"][i]):
-                    startIdx = max(0, i-4)
+                    startIdx = max(0, i - 4)
 
                     positiveTokens = False
                     negativeTokens = False
@@ -793,16 +843,18 @@ class Preprocessing:
                     elif negativeTokens and not positiveTokens:
                         tweet["punctuationAndValence"] = 1
                         break
-     
 
-    def create_feature_array(self):
-        '''Creates a feature matrix for the dataset object and fills the self.feature_array attribute.'''
+    def create_feature_tensor(self):
+        '''Creates a feature tensor for the dataset object and fills the self.feature_tensor attribute.'''
         df = pd.DataFrame(self.dataset)
         features = df.drop(columns=[
             "class",
             "tweetText",
             "tweetTokenized",
+            "tokenValence",
             "posTagged_tweet",
+            "tweetUnigramsEncoded",
+            "tweetBigramsEncoded",
             "emoticons",
             "emoticons_description",
             "tweetWithoutEmojicon",
@@ -810,81 +862,72 @@ class Preprocessing:
             "emojis_description",
             "emojis"
         ])
-        expanded_unigrams = features['unigrams'].apply(pd.Series)
-        expanded_bigrams = features['bigrams'].apply(pd.Series)
+        self.feature_tensor = torch.tensor(features.values, dtype=torch.float32)
 
-        features = pd.concat([features, expanded_unigrams], axis=1)
-        features.drop('unigrams', axis=1, inplace=True)
-
-        features = pd.concat([features, expanded_bigrams], axis=1)
-        features.drop('bigrams', axis=1, inplace=True)
-
-        self.feature_array = features.values
-
-    def create_classification_array(self):
-        '''Creates a classification matrix for the dataset object and fills the self.class_array attribute.'''
+    def create_classification_tensor(self):
+        '''Creates a classification tensor for the dataset object and fills the self.class_tensor attribute.'''
         df = pd.DataFrame(self.dataset)
         class_pd = df["class"]
-        self.class_array = class_pd.values
+        self.class_tensor = torch.tensor(class_pd.values)
 
-# Example usage:
+
 train_data = Preprocessing(OG_dataset)
 train_data.tokenizer()
+train_data.tweet_length_tokenized()
 train_data.handling_emojis()
 train_data.handling_emoticons()
 train_data.pos_tagging()
-#train_data.sentiment()
-#train_data.create_vocabulary()
-#train_data.uni_and_bigrams()
-#train_data.tweet_length_tokenized()
-#train_data.caps_counts()
-#train_data.same_letter_count()
-#train_data.ats_count()
-#train_data.exclamation_mark_count()
-#train_data.question_mark_count()
-#train_data.period_count()
-#train_data.find_consecutive_punctuation()
-#train_data.token_valence()
-#train_data.detect_hyperbole()
-#train_data.valence_before_repeating_punctuation()
+train_data.sentiment()
+train_data.caps_counts()
+train_data.same_letter_count()
+train_data.ats_count()
+train_data.exclamation_mark_count()
+train_data.question_mark_count()
+train_data.period_count()
+train_data.find_consecutive_punctuation()
+train_data.create_valence_tensor()
+train_data.valence_before_repeating_punctuation()
+train_data.detect_hyperbole()
+
+train_data.create_vocabulary()
+train_data.create_bigrams()
+
+train_data.create_uni_bigram_tensor()
+train_data.create_feature_tensor()
+train_data.create_classification_tensor()
 
 
-#pos matrix in self.pos_tags, not padded yet, we will have to see:)
-
-#train_data.create_classification_array()
-#train_data.create_feature_array()
-
-
-#print(train_data.feature_array)
-#class_array_train = train_data.class_array
-#feature_array_train = train_data.feature_array
-
-
-
-'''# Example usage for test data:
-test_data = Preprocessing(testset)
+'''test_data = Preprocessing(testset)
 test_data.tokenizer()
+test_data.tweet_length_tokenized()
 test_data.handling_emojis()
 test_data.handling_emoticons()
-test_data.sentiment()
-# Use the same vocabulary as in the training data
-# If you saved the vocabulary during training, load it here
-# Otherwise, use the vocabulary from the training data directly
+#test_data.pos_tagging()
+train_data.sentiment()
 test_data.vocabulary = train_data.vocabulary
-test_data.tweet_length_tokenized()
-test_data.caps_counts()
-test_data.same_letter_count()
-test_data.ats_count()
-test_data.exclamation_mark_count()
-test_data.question_mark_count()
-test_data.period_count()
-test_data.find_consecutive_punctuation()
-test_data.create_classification_array()
-test_data.create_feature_array()
+test_data.bigrams = train_data.bigrams
+test_data.create_uni_bigram_array()
+print(test_data.unigram_array)
+print(test_data.bigram_array)
+'''
+#print(test_data.dataset)
+'''
+'''
 
-class_array_test = test_data.class_array
-feature_array_test = test_data.feature_array'''
 
-#print(feature_array_train)
+class_tensor_train = train_data.class_tensor
+feature_tensor_train = train_data.feature_tensor
+pos_tensor_train = train_data.pos_tensor
+unigram_tensor_train = train_data.unigram_tensor
+bigram_tensor_train = train_data.bigram_tensor
+valence_tensor_train = train_data.valence_tensor
 
+
+combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train,
+                                   valence_tensor_train), dim=1)
+
+#combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train), dim=1)
+
+print(combined_tensor_train)
+print(combined_tensor_train.shape)
 
