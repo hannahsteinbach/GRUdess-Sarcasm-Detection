@@ -600,7 +600,7 @@ class Preprocessing:
         num_rows = len(self.dataset)
         num_cols = 45000
 
-        embedding_array = np.zeros((num_rows, num_cols), dtype=int)
+        embedding_array = np.zeros((num_rows, num_cols), dtype=float)
 
         # create "encoded embedded array"
         for i, tweet in enumerate(self.dataset):
