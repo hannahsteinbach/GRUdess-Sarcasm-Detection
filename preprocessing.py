@@ -23,7 +23,7 @@ class Preprocessing:
         self.vocabulary = None
         self.bigrams = None
         self.dataset = dataset
-        self.embeddings = None
+        self.embedding_tensor = None
         self.feature_tensor= None
         self.class_tensor = None
         self.pos_tensor = None
@@ -536,10 +536,6 @@ class Preprocessing:
 
             
         """
-
-        total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Including Word Embeddings...")
-
         # load pre-trained model
         # wv = api.load("glove-twitter-100")
         print("Loading Pre-Trained Word Embeddings...")
@@ -569,6 +565,9 @@ class Preprocessing:
         # dictionary to save embeddings for each token
         embedding_dict = dict()
 
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Including Word Embeddings...")
+
         for tweet in self.dataset:
             tokenized_sentence = tweet["tweetTokenized"]
 
@@ -591,7 +590,7 @@ class Preprocessing:
 
         self.embeddings = embedding_dict
 
-    def embedding_tensor(self):
+    def create_embedding_tensor(self):
         """
         Function which takes the self.embeddings dictionary and creates
         the feature tensor for word embeddings (most probably of the length 45.000)
@@ -602,6 +601,9 @@ class Preprocessing:
 
         embedding_array = np.zeros((num_rows, num_cols), dtype=float)
 
+        total_iterations = len(self.dataset)
+        progressBar = tqdm(total=total_iterations, desc="Creating Embedding Tensor...")
+        
         # create "encoded embedded array"
         for i, tweet in enumerate(self.dataset):
             tweet_embeddings_encoded = list()
@@ -616,11 +618,9 @@ class Preprocessing:
             for j, embedding in enumerate(tweet_embeddings_encoded):
                 embedding_array[i, j + distance_embeddings] = embedding
 
-            print(len(embedding_array[i]))
-            for index, value in enumerate(embedding_array[i]):
-                if index == 41700:
-                    print(value)
+            progressBar.update(1)
 
+        progressBar.close()
         self.embedding_tensor = torch.tensor(embedding_array)
         
     def question_mark_count(self):
@@ -894,7 +894,8 @@ class Preprocessing:
             "tweetWithoutEmojicon",
             "tweetWithEmojiconDescription",
             "emojis_description",
-            "emojis"
+            "emojis",
+            "tweetEmbeddingsEncoded"
         ])
         self.feature_tensor = torch.tensor(features.values, dtype=torch.float32)
 
@@ -909,7 +910,7 @@ train_data = Preprocessing(OG_dataset)
 train_data.tokenizer()
 train_data.tweet_length_tokenized()
 train_data.include_2vec()
-train_data.embedding_tensor()
+train_data.create_embedding_tensor()
 train_data.handling_emojis()
 train_data.handling_emoticons()
 train_data.pos_tagging()
@@ -957,10 +958,11 @@ pos_tensor_train = train_data.pos_tensor
 unigram_tensor_train = train_data.unigram_tensor
 bigram_tensor_train = train_data.bigram_tensor
 valence_tensor_train = train_data.valence_tensor
+embedding_tensor_train = train_data.embedding_tensor
 
 
 combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train,
-                                   valence_tensor_train), dim=1)
+                                   valence_tensor_train, ), dim=1)
 
 #combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train), dim=1)
 
