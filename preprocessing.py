@@ -23,7 +23,7 @@ class Preprocessing:
         self.vocabulary = None
         self.bigrams = None
         self.dataset = dataset
-        self.embeddings = []
+        self.embeddings = None
         self.feature_tensor= None
         self.class_tensor = None
         self.pos_tensor = None
@@ -397,7 +397,9 @@ class Preprocessing:
             tweet["tweetBigramsEncoded"] = tweet_bigrams_encoded
 
             distance_uni = num_cols - len(tweet["tweetUnigramsEncoded"]) #pre-padding
-            for j, token_id in enumerate(tweet_unigrams_encoded): #fill in the matrix correspondingly
+            
+            # fill in the matrix correspondingly
+            for j, token_id in enumerate(tweet_unigrams_encoded): 
                 unigram_array[i, j + distance_uni] = token_id
 
             distance_bi = num_cols - len(tweet["tweetBigramsEncoded"])
@@ -524,27 +526,30 @@ class Preprocessing:
 
     def include_2vec(self):
         """
-            Function to include word2vec word embeddings.
+            Function to include word2vec word embedding for each token.
 
+            Input:
+            1. dataset (list)  : A list of all tweets as dictionaries.
 
-            INFORMATION
-            We could try out different models, the higher thhe
-            dimension though, the more accurate the results
+            Output:
+            1. 
 
-            word2vec models:
-            https://github.com/piskvorky/gensim-data
+            
         """
 
         total_iterations = len(self.dataset)
-        progressBar = tqdm(total=total_iterations, desc="Word Embeddings...")
+        progressBar = tqdm(total=total_iterations, desc="Including Word Embeddings...")
 
         # load pre-trained model
         # wv = api.load("glove-twitter-100")
-        wv = api.load("word2vec-google-news-300")
+        print("Loading Pre-Trained Word Embeddings...")
+        wv_model = api.load("word2vec-google-news-300")
+        print("Loaded Pre-Trained Word Embeddings...")
 
         # save the vectors
-        # wv.save("./used_models/vectors.kv")
-        # wv = "./data/vectors.kv"
+        # wv_model.save("./used_models/word2vec.model")
+        # wv_model = "./data/vectors.kv"
+        # wv_model = Word2Vec.load("./used_models/word2vec.model")
 
         # load emoji2vec model (emoji2vec.bin)
         def emoji_embeddings(path="./data/emoji2vec.txt"):
@@ -561,34 +566,63 @@ class Preprocessing:
 
         emoji_emb_dict = emoji_embeddings()
 
+        # dictionary to save embeddings for each token
+        embedding_dict = dict()
+
         for tweet in self.dataset:
             tokenized_sentence = tweet["tweetTokenized"]
 
-            # create tweet dict entry
-            tweet["embeddings"] = list()
-
-            # count the words that are represented as
-            # vector --> later for the average of thee sentence
-            counter = 0
+            # # create tweet dict entry
+            # tweet["embeddings"] = list()
 
             for token in tokenized_sentence:
-                if token in wv:
-                    tweet["embeddings"].append(wv[token])
-                    # counter += 1
-                    # wv_res += wv[token]
-                    # tweet["tweetTokenEmbeddings"].append(wv_res)
-                elif token in emoji_emb_dict.keys():  # what about tokens where 2+ emojis occur????
-                    tweet["embeddings"].append(emoji_emb_dict[token])
-                else:
-                    tweet["embeddings"].append(None)
+                if token in wv_model:
+                    embedding_dict[token] = wv_model[token].tolist()
 
-            # compute average of the sentence
-            # wv_res = wv_res/counter
+                elif token in emoji_emb_dict.keys():  # what about tokens where 2+ emojis occur????
+                    embedding_dict[token] = emoji_emb_dict[token]
+
+                else:
+                    embedding_dict[token] = [0 for i in range(300)]
 
             progressBar.update(1)
 
         progressBar.close()
 
+        self.embeddings = embedding_dict
+
+    def embedding_tensor(self):
+        """
+        Function which takes the self.embeddings dictionary and creates
+        the feature tensor for word embeddings (most probably of the length 45.000)
+        """
+
+        num_rows = len(self.dataset)
+        num_cols = 45000
+
+        embedding_array = np.zeros((num_rows, num_cols), dtype=int)
+
+        # create "encoded embedded array"
+        for i, tweet in enumerate(self.dataset):
+            tweet_embeddings_encoded = list()
+
+            for token in tweet["tweetTokenized"]:
+                
+                tweet_embeddings_encoded.extend(self.embeddings[token])
+
+            tweet["tweetEmbeddingsEncoded"] = tweet_embeddings_encoded
+
+            distance_embeddings = num_cols - len(tweet["tweetEmbeddingsEncoded"]) # 45000 because 150 tokens/columns* 300 = 45000
+            for j, embedding in enumerate(tweet_embeddings_encoded):
+                embedding_array[i, j + distance_embeddings] = embedding
+
+            print(len(embedding_array[i]))
+            for index, value in enumerate(embedding_array[i]):
+                if index == 41700:
+                    print(value)
+
+        self.embedding_tensor = torch.tensor(embedding_array)
+        
     def question_mark_count(self):
         """
         Function to add a feature representing the number of question marks in each tweet.
@@ -874,6 +908,8 @@ class Preprocessing:
 train_data = Preprocessing(OG_dataset)
 train_data.tokenizer()
 train_data.tweet_length_tokenized()
+train_data.include_2vec()
+train_data.embedding_tensor()
 train_data.handling_emojis()
 train_data.handling_emoticons()
 train_data.pos_tagging()
