@@ -5,13 +5,14 @@ import torch.optim as optim
 from focal_loss import class_weights, FocalLoss
 from torch.utils.data import Dataset, DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 from preprocessing import combined_tensor_train, class_tensor_train
 from sklearn.model_selection import KFold, StratifiedKFold
 from sklearn.metrics import f1_score, precision_score, recall_score
 
 
 class GRUDESS(nn.Module):
-    def __init__(self, input_size, hidden_size, num_layers, num_classes):
+    def __init__(self, input_size, hidden_size, num_layers, num_classes, dropout_rate=0.2): # typical dropout values around 0.2-0.5; experimentation needed
         super(GRUDESS, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -19,6 +20,7 @@ class GRUDESS(nn.Module):
         # x -> batch_size, sequence_len, input_size
 
         self.fc = nn.Linear(hidden_size * 2, num_classes)  # 2 for bidirectional
+        self.dropout = nn.Dropout(dropout_rate)
 
     def forward(self, x):
         h0 = torch.zeros(self.num_layers * 2, x.size(0), self.hidden_size).to(
@@ -30,9 +32,31 @@ class GRUDESS(nn.Module):
         # wan:out (N, 128)
         # out = out[:, -1, :]  # (N, 128)
         out = torch.cat((out[:, -1, :self.hidden_size], out[:, 0, self.hidden_size:]), dim=1)
+        out = self.dropout(out)
         out = self.fc(out)
         return out
 
+class EarlyStopping:
+    
+    def __init__(self, patience=5, min_delta=0): # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
+
+        self.patience = patience
+        self.minDelta = min_delta
+        self.counter = 0
+        self.bestLoss = None
+        self.stopped = False
+
+    def __call__(self, lossValue):
+        if self.bestLoss == None:
+            self.bestLoss = lossValue
+        elif self.bestLoss - lossValue > self.minDelta:
+            self.bestLoss = lossValue
+            self.counter = 0
+        else:
+            self.counter += 1
+            if self.counter >= self.patience:
+                print('Early stopping!')
+                self.stopped = True
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -68,6 +92,16 @@ def run_grudess_CV(train_dataset,
     # Track accuracy for each fold
     folds_values = dict()
 
+    model = GRUDESS(input_size, hidden_size, num_layers, num_classes).to(device)
+
+    criterion = FocalLoss(alpha=weights, gamma=2)
+    # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
+
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, cooldown=2, min_lr=1e-6)
+        
+    earlyStop = EarlyStopping(patience=5, min_delta=0.001)
+
     for fold, (train_index, val_index) in enumerate(skf.split(combined_tensor_train, class_tensor_train)):
         print(f"Fold {fold + 1}/{k}")
 
@@ -90,22 +124,16 @@ def run_grudess_CV(train_dataset,
                               train_index)
         val_subset = Subset(train_dataset,
                             val_index)
-
+        
         # create dataloader
         train_loader = DataLoader(train_subset,
-                                  batch_size=batch_size,
-                                  shuffle=True)
+                              batch_size=batch_size,
+                              shuffle=True)
         val_loader = DataLoader(val_subset,
-                                batch_size=batch_size,
-                                shuffle=True)
+                            batch_size=batch_size,
+                            shuffle=True)
 
         weights = torch.FloatTensor(class_weights(class_tensor_train))
-
-        model = GRUDESS(input_size, hidden_size, num_layers, num_classes).to(device)
-
-        criterion = FocalLoss(alpha=weights, gamma=2)
-        # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
-        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
         for epoch in range(num_epochs):
             model.train()
@@ -126,6 +154,10 @@ def run_grudess_CV(train_dataset,
                 loss_e += loss.item()
                 folds_values[fold]["losses"].append(loss)
 
+                # gradient clipping:
+                if max_grad_norm is not None:
+                    torch.nn.utils.clip_grad_norm_(model.parameters(), max_grad_norm)
+                
                 # backward and optimization
                 optimizer.zero_grad()
                 loss.backward()
@@ -136,7 +168,15 @@ def run_grudess_CV(train_dataset,
 
                     # Print the average loss for the epoch
             average_epoch_loss = loss_e / len(train_loader)
+            scheduler.step()
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_epoch_loss}")
+            
+            # if the model performance stops improving before iterating through all epochs,
+            # stop training early
+            earlyStop(folds_values[-1]) # check if the last loss value is the best
+            if earlyStop.stopped:
+                print("Early stopping!")
+            break
 
         model.eval()
         n_correct = 0
@@ -213,9 +253,9 @@ hidden_size = 128
 num_classes = 2
 num_epochs = 25
 batch_size = 50
-learning_rate = 0.0001
-
+learning_rate = 0.01
 k = 3
+max_grad_norm = 5
 
 run_grudess_CV(train_dataset,
                class_tensor_train,
@@ -225,4 +265,5 @@ run_grudess_CV(train_dataset,
                num_epochs,
                batch_size,
                learning_rate,
-               k)
+               k,
+               max_grad_norm)
