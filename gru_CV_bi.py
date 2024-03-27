@@ -136,7 +136,7 @@ def run_grudess_CV(train_dataset,
 
     weights = torch.FloatTensor(class_weights(class_tensor_train))
 
-    model = GRUdess(input_size, hidden_size, num_layers, num_classes).to(device)
+    model = GRUdess(input_size, hidden_size, num_layers, num_classes, dropout_rate).to(device)
 
     criterion = FocalLoss(alpha=weights, gamma=2)
     # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
