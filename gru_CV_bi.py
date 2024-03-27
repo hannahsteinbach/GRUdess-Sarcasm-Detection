@@ -3,15 +3,48 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from focal_loss import class_weights, FocalLoss
+from focalloss import class_weights, FocalLoss
 from torch.utils.data import  DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from preprocessing import combined_tensor_train, class_tensor_train
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score, precision_score, recall_score
-
+import wandb
 random.seed(9)
+
+wandb.init(project="gru_test")
+config = wandb.config
+config.scheduler_factor = 0.1
+config.scheduler_patience = 3
+config.scheduler_cooldown = 2
+config.scheduler_min_lr = 1e-6
+config.earlystop_patience = 5
+config.earlystop_min_delta = 0.001
+config.num_layers = 2
+config.hidden_size = 128
+config.num_classes = 2
+config.num_epochs = 25
+config.batch_size = 50
+config.learning_rate = 0.001
+config.k = 3
+config.max_grad_norm = 5
+
+num_layers = config.num_layers
+hidden_size = config.hidden_size
+num_classes = config.num_classes
+num_epochs = config.num_epochs
+batch_size = config.batch_size
+learning_rate = config.learning_rate
+k = config.k
+max_grad_norm = config.max_grad_norm
+scheduler_factor = config.scheduler_factor
+scheduler_patience = config.scheduler_patience
+scheduler_cooldown = config.scheduler_cooldown
+scheduler_min_lr = config.scheduler_min_lr
+earlystop_patience = config.earlystop_patience
+earlystop_min_delta = config.earlystop_min_delta
+
 
 class GRUdess(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes,
@@ -76,6 +109,7 @@ def run_grudess_CV(train_dataset,
                    batch_size,
                    learning_rate,
                    k, max_grad_norm):
+
     all_precision_scores = list()
     all_recall_scores = list()
     all_f1_scores = []
@@ -106,11 +140,14 @@ def run_grudess_CV(train_dataset,
     # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, cooldown=2, min_lr=1e-6)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=scheduler_factor,
+                                  patience=scheduler_patience, cooldown=scheduler_cooldown,
+                                  min_lr=scheduler_min_lr)
 
-    earlyStop = EarlyStopping(patience=5, min_delta=0.001)
+    earlyStop = EarlyStopping(patience=earlystop_patience, min_delta=earlystop_min_delta)
 
     for fold, (train_index, val_index) in enumerate(skf.split(combined_tensor_train, class_tensor_train)):
+        wandb.log({"Fold": fold + 1})
         print(f"Fold {fold + 1}/{k}")
 
         # save results of losses etc. for every fold/epoch etc.
@@ -171,11 +208,13 @@ def run_grudess_CV(train_dataset,
 
                 if (i + 1) % 100 == 0:
                     print(f"Epoch {epoch + 1}/{num_epochs}, Batch {i + 1}, Loss: {loss.item()}")
-
-                    # Print the average loss for the epoch
             average_epoch_loss = loss_e / len(train_loader)
             scheduler.step(average_epoch_loss) # i (hannah) filled this, is that correct?
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_epoch_loss}")
+
+            wandb.log({
+                "Average epoch loss": average_epoch_loss,
+            })
 
             # if the model performance stops improving before iterating through all epochs,
             # stop training early
@@ -184,6 +223,7 @@ def run_grudess_CV(train_dataset,
             if earlyStop.stopped:
                 print("Early stopping!")
                 break #indented so it only stops when it should
+
 
         model.eval()
         n_correct = 0
@@ -240,6 +280,13 @@ def run_grudess_CV(train_dataset,
                 folds_values[fold]["f1_scores"].append(f1)
                 all_f1_scores.append(f1)
 
+                wandb.log({
+                    "loss": loss.item(),
+                    "recall": rec,
+                    "ision": prec,
+                    "f1_score": f1,
+                    "accuracy": acc
+                })
             acc = 100.0 * n_correct / n_samples
 
     overall_prec_score = np.mean(all_precision_scores)
@@ -251,18 +298,18 @@ def run_grudess_CV(train_dataset,
     print("Overall F1 score:", overall_f1_score)
     print(f"Accuracy of {acc}%")
 
+    wandb.log({
+        "Overall Precision": overall_prec_score,
+        "Overall Recall": overall_rec_score,
+        "Overall F1 Score": overall_f1_score,
+        "Overall accuracy": acc
+    })
+
+    wandb.finish()
+
 
 train_dataset = combined_tensor_train
 class_tensor_train = class_tensor_train
-num_layers = 2
-
-hidden_size = 128
-num_classes = 2
-num_epochs = 25
-batch_size = 50
-learning_rate = 0.001
-k = 3
-max_grad_norm = 5
 
 run_grudess_CV(train_dataset,
                class_tensor_train,
