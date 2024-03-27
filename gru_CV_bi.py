@@ -1,3 +1,4 @@
+import random
 import numpy as np
 import torch
 import torch.nn as nn
@@ -10,11 +11,12 @@ from preprocessing import combined_tensor_train, class_tensor_train
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score, precision_score, recall_score
 
+random.seed(9)
 
-class GRUDESS(nn.Module):
+class GRUdess(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes,
                  dropout_rate=0.2):  # typical dropout values around 0.2-0.5; experimentation needed
-        super(GRUDESS, self).__init__()
+        super(GRUdess, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
         self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, bidirectional=True)
@@ -98,7 +100,7 @@ def run_grudess_CV(train_dataset,
 
     weights = torch.FloatTensor(class_weights(class_tensor_train))
 
-    model = GRUDESS(input_size, hidden_size, num_layers, num_classes).to(device)
+    model = GRUdess(input_size, hidden_size, num_layers, num_classes).to(device)
 
     criterion = FocalLoss(alpha=weights, gamma=2)
     # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
