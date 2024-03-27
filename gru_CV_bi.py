@@ -27,7 +27,6 @@ config.dropout_rate = 0.2
 config.num_epochs = 25
 config.batch_size = 50
 config.learning_rate = 0.001
-config.k = 3
 config.max_grad_norm = 5
 
 
@@ -43,7 +42,6 @@ dropout_rate = config.dropout_rate
 num_epochs = config.num_epochs
 batch_size = config.batch_size
 learning_rate = config.learning_rate
-k = config.k
 max_grad_norm = config.max_grad_norm
 
 
@@ -323,3 +321,5 @@ run_grudess_CV(train_dataset,
                learning_rate,
                k,
                max_grad_norm)
+
+k = 3
