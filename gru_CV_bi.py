@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from focal_loss import class_weights, FocalLoss
+from focalloss import class_weights, FocalLoss
 from torch.utils.data import  DataLoader, TensorDataset, Subset
 from torch.nn.utils.rnn import pad_sequence, pack_padded_sequence
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -43,6 +43,7 @@ num_epochs = config.num_epochs
 batch_size = config.batch_size
 learning_rate = config.learning_rate
 max_grad_norm = config.max_grad_norm
+num_classes = 2
 
 
 
@@ -75,8 +76,8 @@ class GRUdess(nn.Module):
 
 class EarlyStopping:
 
-    def __init__(self, patience,
-                 min_delta):  # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
+    def __init__(self, patience=earlystop_patience,
+                 min_delta=earlystop_min_delta):  # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
 
         self.patience = patience
         self.minDelta = min_delta
@@ -113,6 +114,7 @@ def run_grudess_CV(train_dataset,
     all_precision_scores = list()
     all_recall_scores = list()
     all_f1_scores = []
+    all_accuracy_scores = []
 
     # Define hyperparameters
     input_size = combined_tensor_train.size(1)
@@ -229,8 +231,8 @@ def run_grudess_CV(train_dataset,
         n_correct = 0
         n_samples = 0
         # validation test the model
+        # validation test the model
         with torch.no_grad():
-
             for tweets, labels in val_loader:
                 tweets = tweets.reshape(-1, sequence_len, input_size).to(device)
                 labels = labels.to(device)
@@ -241,21 +243,16 @@ def run_grudess_CV(train_dataset,
                         folds_values[fold]["val_sarcasm"] += 1
 
                 _, predicted = torch.max(outputs.data, 1)
-                # print("predicted:", predicted)
-                # print("labels:", labels)
                 n_samples += labels.size(0)
                 n_correct += (predicted == labels).sum().item()
 
                 for y_gold, y_pred in zip(labels, predicted):
                     if y_pred == 1 and y_pred == y_gold:
                         folds_values[fold]["tp"] += 1
-
                     elif y_pred == 1 and y_pred != y_gold:
                         folds_values[fold]["fp"] += 1
-
                     elif y_pred == 0 and y_pred != y_gold:
                         folds_values[fold]["fn"] += 1
-
                     elif y_pred == 0 and y_pred == y_gold:
                         folds_values[fold]["tn"] += 1
 
@@ -280,23 +277,28 @@ def run_grudess_CV(train_dataset,
                 folds_values[fold]["f1_scores"].append(f1)
                 all_f1_scores.append(f1)
 
+                # Log evaluation metrics
+                acc = 100.0 * n_correct / n_samples     #where does this go??
+                all_accuracy_scores.append(acc)
+
                 wandb.log({
                     "loss": loss.item(),
                     "recall": rec,
-                    "ision": prec,
+                    "precision": prec,
                     "f1_score": f1,
                     "accuracy": acc
                 })
-            acc = 100.0 * n_correct / n_samples
 
     overall_prec_score = np.mean(all_precision_scores)
     overall_rec_score = np.mean(all_recall_scores)
     overall_f1_score = np.mean(all_f1_scores)
+    overall_accuracy_score = np.mean(all_accuracy_scores)
+
 
     print("Overall Precision score:", overall_prec_score)
     print("Overall Recall score:", overall_rec_score)
     print("Overall F1 score:", overall_f1_score)
-    print(f"Accuracy of {acc}%")
+    print(f"Overall accuracy of {overall_accuracy_score}%")
 
     wandb.log({
         "Overall Precision": overall_prec_score,
@@ -311,6 +313,8 @@ def run_grudess_CV(train_dataset,
 train_dataset = combined_tensor_train
 class_tensor_train = class_tensor_train
 
+k = 3
+
 run_grudess_CV(train_dataset,
                class_tensor_train,
                num_layers,
@@ -321,5 +325,3 @@ run_grudess_CV(train_dataset,
                learning_rate,
                k,
                max_grad_norm)
-
-k = 3
