@@ -23,32 +23,34 @@ config.earlystop_patience = 5
 config.earlystop_min_delta = 0.001
 config.num_layers = 2
 config.hidden_size = 128
-config.num_classes = 2
+config.dropout_rate = 0.2
 config.num_epochs = 25
 config.batch_size = 50
 config.learning_rate = 0.001
 config.k = 3
 config.max_grad_norm = 5
 
-num_layers = config.num_layers
-hidden_size = config.hidden_size
-num_classes = config.num_classes
-num_epochs = config.num_epochs
-batch_size = config.batch_size
-learning_rate = config.learning_rate
-k = config.k
-max_grad_norm = config.max_grad_norm
+
 scheduler_factor = config.scheduler_factor
 scheduler_patience = config.scheduler_patience
 scheduler_cooldown = config.scheduler_cooldown
 scheduler_min_lr = config.scheduler_min_lr
 earlystop_patience = config.earlystop_patience
 earlystop_min_delta = config.earlystop_min_delta
+num_layers = config.num_layers
+hidden_size = config.hidden_size
+dropout_rate = config.dropout_rate
+num_epochs = config.num_epochs
+batch_size = config.batch_size
+learning_rate = config.learning_rate
+k = config.k
+max_grad_norm = config.max_grad_norm
+
 
 
 class GRUdess(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes,
-                 dropout_rate=0.2):  # typical dropout values around 0.2-0.5; experimentation needed
+                 dropout_rate):  # typical dropout values around 0.2-0.5; experimentation needed
         super(GRUdess, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -75,8 +77,8 @@ class GRUdess(nn.Module):
 
 class EarlyStopping:
 
-    def __init__(self, patience=5,
-                 min_delta=0):  # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
+    def __init__(self, patience,
+                 min_delta):  # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
 
         self.patience = patience
         self.minDelta = min_delta
