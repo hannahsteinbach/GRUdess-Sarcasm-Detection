@@ -10,39 +10,20 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from preprocessing import combined_tensor_train, class_tensor_train
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score, precision_score, recall_score
-import wandb
-random.seed(9)
 
-wandb.init(project="gru_test")
-config = wandb.config
-config.scheduler_factor = 0.1
-config.scheduler_patience = 3
-config.scheduler_cooldown = 2
-config.scheduler_min_lr = 1e-6
-config.earlystop_patience = 5
-config.earlystop_min_delta = 0.001
-config.num_layers = 2
-config.hidden_size = 128
-config.dropout_rate = 0.2
-config.num_epochs = 25
-config.batch_size = 50
-config.learning_rate = 0.001
-config.max_grad_norm = 5
-
-
-scheduler_factor = config.scheduler_factor
-scheduler_patience = config.scheduler_patience
-scheduler_cooldown = config.scheduler_cooldown
-scheduler_min_lr = config.scheduler_min_lr
-earlystop_patience = config.earlystop_patience
-earlystop_min_delta = config.earlystop_min_delta
-num_layers = config.num_layers
-hidden_size = config.hidden_size
-dropout_rate = config.dropout_rate
-num_epochs = config.num_epochs
-batch_size = config.batch_size
-learning_rate = config.learning_rate
-max_grad_norm = config.max_grad_norm
+scheduler_factor = 0.1
+scheduler_patience = 3
+scheduler_cooldown = 2
+scheduler_min_lr = 1e-6
+earlystop_patience = 5
+earlystop_min_delta = 0.001
+num_layers = 2
+hidden_size = 128
+dropout_rate = 0.2
+num_epochs = 25
+batch_size = 50
+learning_rate = 0.001
+max_grad_norm = 5
 num_classes = 2
 
 
@@ -147,8 +128,6 @@ def run_grudess_CV(train_dataset,
 
     for fold, (train_index, val_index) in enumerate(skf.split(combined_tensor_train, class_tensor_train)):
         earlyStop = EarlyStopping(patience=earlystop_patience, min_delta=earlystop_min_delta)
-
-        wandb.log({"Fold": fold + 1})
         print(f"Fold {fold + 1}/{k}")
 
         # save results of losses etc. for every fold/epoch etc.
@@ -213,10 +192,6 @@ def run_grudess_CV(train_dataset,
             scheduler.step(average_epoch_loss) 
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_epoch_loss}")
 
-            wandb.log({
-                "Average epoch loss": average_epoch_loss,
-            })
-
             # if the model performance stops improving before iterating through all epochs,
             # stop training early
             earlyStop(folds_values[fold]["losses"][-1])  # check if the last loss value is the best, need to access
@@ -280,14 +255,6 @@ def run_grudess_CV(train_dataset,
                 acc = 100.0 * n_correct / n_samples     #where does this go??
                 all_accuracy_scores.append(acc)
 
-                wandb.log({
-                    "loss": loss.item(),
-                    "recall": rec,
-                    "precision": prec,
-                    "f1_score": f1,
-                    "accuracy": acc
-                })
-
     overall_prec_score = np.mean(all_precision_scores)
     overall_rec_score = np.mean(all_recall_scores)
     overall_f1_score = np.mean(all_f1_scores)
@@ -298,15 +265,6 @@ def run_grudess_CV(train_dataset,
     print("Overall Recall score:", overall_rec_score)
     print("Overall F1 score:", overall_f1_score)
     print(f"Overall accuracy of {overall_accuracy_score}%")
-
-    wandb.log({
-        "Overall Precision": overall_prec_score,
-        "Overall Recall": overall_rec_score,
-        "Overall F1 Score": overall_f1_score,
-        "Overall accuracy": acc
-    })
-
-    wandb.finish()
 
 
 train_dataset = combined_tensor_train
