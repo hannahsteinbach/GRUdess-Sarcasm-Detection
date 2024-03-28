@@ -11,18 +11,18 @@ from preprocessing import combined_tensor_train, class_tensor_train
 from sklearn.model_selection import StratifiedKFold
 from sklearn.metrics import f1_score, precision_score, recall_score
 
-scheduler_factor = 0.1
+scheduler_factor = 0.5
 scheduler_patience = 3
-scheduler_cooldown = 2
-scheduler_min_lr = 1e-6
-earlystop_patience = 5
-earlystop_min_delta = 0.001
-num_layers = 2
-hidden_size = 128
-dropout_rate = 0.2
+scheduler_cooldown = 5
+scheduler_min_lr = 2.000e-7
+earlystop_patience = 8
+earlystop_min_delta = 0.005
+num_layers = 12
+hidden_size = 256
+dropout_rate = 0.5
 num_epochs = 25
-batch_size = 50
-learning_rate = 0.001
+batch_size = 128
+learning_rate = 0.0001
 max_grad_norm = 5
 num_classes = 2
 
