@@ -278,7 +278,7 @@ class Preprocessing:
         pos_array = np.zeros((num_rows, num_cols), dtype=int)
 
         # Load model
-        model = "./data/english_newspaper_2017-09-15.model"
+        model = "./data/used_models/english_newspaper_2017-09-15.model"
 
         # Create object for pos tagger
         print("Loading PoS tagger...")
