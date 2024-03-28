@@ -549,9 +549,14 @@ class Preprocessing:
             wv_model = api.load("word2vec-google-news-300")
             print("Loaded Pre-Trained Word Embeddings...")
 
-            print("Saving Word2Vec Model...")
-            wv_model.save("./data/word2vec.model")
-            print("Word2Vec Model Saved Successfully...")
+            # model can't be saved if user as too less space on device
+            # include scape to avoid error
+            try:
+                print("Saving Word2Vec Model...")
+                wv_model.save("./data/word2vec.model")
+                print("Word2Vec Model Saved Successfully...")
+            except:
+                print("No space on device to save model.")
 
 
         # load emoji2vec model (emoji2vec.bin)
