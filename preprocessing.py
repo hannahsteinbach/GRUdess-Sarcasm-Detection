@@ -721,6 +721,7 @@ class Preprocessing:
 
         progressBar.close()
 
+
     def ats_count(self):
         """
         Function to add a feature representing the number of user mentions in each tweet.
@@ -737,15 +738,16 @@ class Preprocessing:
         for tweet in self.dataset:
             tweetText = tweet["tweetText"]
             atsCount = len(re.findall(r'@\w+', tweetText))
-            totalChars = len(tweet["tweetText"])
-            if totalChars > 0:
-                normalized = atsCount / totalChars
+            totalToken= tweet["tweetTokenizedLength"]
+            if totalToken > 0:
+                normalized = atsCount / totalToken
             else:
                 normalized = 0
             tweet["taggedCount"] = normalized
             progressBar.update(1)
 
         progressBar.close()
+
 
     def create_valence_tensor(self):  # note: this is not used as a feature, but simply a helper function
         """
