@@ -94,7 +94,6 @@ class EarlyStopping:
         else:
             self.counter += 1
             if self.counter >= self.patience:
-                print('Early stopping!')
                 self.stopped = True
 
 
@@ -146,9 +145,9 @@ def run_grudess_CV(train_dataset,
                                   patience=scheduler_patience, cooldown=scheduler_cooldown,
                                   min_lr=scheduler_min_lr)
 
-    earlyStop = EarlyStopping(patience=earlystop_patience, min_delta=earlystop_min_delta)
-
     for fold, (train_index, val_index) in enumerate(skf.split(combined_tensor_train, class_tensor_train)):
+        earlyStop = EarlyStopping(patience=earlystop_patience, min_delta=earlystop_min_delta)
+
         wandb.log({"Fold": fold + 1})
         print(f"Fold {fold + 1}/{k}")
 
@@ -211,7 +210,7 @@ def run_grudess_CV(train_dataset,
                 if (i + 1) % 100 == 0:
                     print(f"Epoch {epoch + 1}/{num_epochs}, Batch {i + 1}, Loss: {loss.item()}")
             average_epoch_loss = loss_e / len(train_loader)
-            scheduler.step(average_epoch_loss) # i (hannah) filled this, is that correct?
+            scheduler.step(average_epoch_loss) 
             print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_epoch_loss}")
 
             wandb.log({
@@ -224,7 +223,7 @@ def run_grudess_CV(train_dataset,
                                                          #  correct entry fri
             if earlyStop.stopped:
                 print("Early stopping!")
-                break #indented so it only stops when it should
+                break
 
 
         model.eval()
