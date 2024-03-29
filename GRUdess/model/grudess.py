@@ -110,6 +110,8 @@ def run_grudess_CV(combined_tensor_train,
 
     earlyStop = EarlyStopping(patience=5, min_delta=0.001)
 
+    print("Starting training...")
+
     for fold, (train_index, val_index) in enumerate(skf.split(combined_tensor_train, class_tensor_train)):
         print(f"Fold {fold + 1}/{k}")
 
@@ -185,6 +187,7 @@ def run_grudess_CV(combined_tensor_train,
                 print("Early stopping!")
                 break #indented so it only stops when it should
 
+        print("Starting testing...")
         model.eval()
         n_correct = 0
         n_samples = 0
@@ -328,6 +331,8 @@ def run_grudess_train_test(train_dataset,
                             batch_size=batch_size,
                             shuffle=False)
 
+    print("Starting training...")
+
     for epoch in range(num_epochs):
         model.train()
         loss_e = 0
@@ -375,6 +380,8 @@ def run_grudess_train_test(train_dataset,
     # Save the trained model
     torch.save(model.state_dict(), './GRUdess/results/GRUdess_model.pth')
     print("Model saved successfully.")
+
+    print("Starting testing...")
 
     model.eval()
     n_correct = 0
