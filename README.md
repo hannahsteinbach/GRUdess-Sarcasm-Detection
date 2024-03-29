@@ -4,29 +4,29 @@ Welcome! This project aims to detect sarcasm in text data gathered from Twitter 
 
 ## Our hand-crafted features classified
 
-| Classification                        | Feature                                                     | Corresponding Functions          |
+| Classification                        | Feature                                                     | Corresponding Functions in preprocessing.py       |
 |---------------------------------------|-------------------------------------------------------------|---------------------------------|
 | **I. Token-specific features**        |                                                             |                                 |
-| Lexical features                      | Unigrams                                                    | `get_unigrams()`                |
-|                                       | Bigrams                                                     | `get_bigrams()`                 |
-| Syntactic features                    | POS-tags                                                    | `get_pos_tags()`                |
-| Embeddings                            | Word and Emoji Embeddings                                   | `get_word_emoji_embeddings()`   |
-| Sentiment/emotion features            | Token sentiments                                            | `get_token_sentiments()`        |
+| Lexical features                      | Unigrams                                                    | `create_vocabulary` + `create_uni_bigram_tensor `              |
+|                                       | Bigrams                                                     | `create_bigrams()` + `create_uni_bigram_tensor `                 |
+| Syntactic features                    | POS-tags                                                    | `pos_tagging()`                |
+| Embeddings                            | Word and Emoji Embeddings                                   | `include_2vec()` + `create_embedding_tensor`  |
+| Sentiment/emotion features            | Token sentiments                                            | `create_valence_tensor()`        |
 | **II. Tweet-specific features**       |                                                             |                                 |
-| Sentiment/emotion features            | Polarity of a tweet                                         | `get_tweet_polarity()`          |
-|                                       | Frequency of words containing repeating letter sequences    | `get_repeating_letter_freq()`   |
-|                                       | Sentiment before consecutive punctuation                     | `get_sentiment_before_punctuation()` |
-|                                       | Hyperboles                                                  | `get_hyperboles()`              |
-| Stylistic/Sentiment/emotion features | Frequency of words written in all-caps                      | `get_all_caps_freq()`           |
-|                                       | Frequency of capitalized letters                            | `get_capitalized_letter_freq()` |
-| Pragmatic features                    | Tweet length                                                | `get_tweet_length()`            |
-|                                       | Frequency of user mentions                                  | `get_user_mentions_freq()`      |
-|                                       | Frequency of emojis                                         | `get_emojis_freq()`             |
-|                                       | Frequency of emoticons                                      | `get_emoticons_freq()`          |
-| Punctuation features                  | Frequency of question marks                                 | `get_question_marks_freq()`     |
-|                                       | Frequency of exclamation marks                              | `get_exclamation_marks_freq()`  |
-|                                       | Frequency of periods                                        | `get_periods_freq()`            |
-|                                       | Consecutive repeatings of punctuation                       | `get_consecutive_punctuation_freq()` |
+| Sentiment/emotion features            | Polarity of a tweet                                         | `sentiment()`          |
+|                                       | Frequency of words containing repeating letter sequences    | `same_letter_count()`   |
+|                                       | Sentiment before consecutive punctuation                     | `valence_before_repeating_punctuation()` |
+|                                       | Hyperboles                                                  | `detect_hyperbole()`              |
+| Stylistic/Sentiment/emotion features | Frequency of words written in all-caps                      | `caps_counts()`           |
+|                                       | Frequency of capitalized letters                            | `caps_counts()` |
+| Pragmatic features                    | Tweet length                                                | `tweet_length_tokenized()`            |
+|                                       | Frequency of user mentions                                  | `ats_count()`      |
+|                                       | Frequency of emojis                                         | `handling_emojis()`             |
+|                                       | Frequency of emoticons                                      | `handling_emoticons()`          |
+| Punctuation features                  | Frequency of question marks                                 | `question_mark_count()`     |
+|                                       | Frequency of exclamation marks                              | `exclamation_mark_count()`  |
+|                                       | Frequency of periods                                        | `period_count()`            |
+|                                       | Consecutive punctuation                       | `find_consecutive_punctuation()` |
 | Stylistic features                    | Words with first letter capitalized                        | `get_first_letter_capitalized_words()` |
 
 
