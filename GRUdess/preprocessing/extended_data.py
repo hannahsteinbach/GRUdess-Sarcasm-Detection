@@ -3,10 +3,12 @@ import html
 import random
 import re
 import json
+from main import ROOT_DIR
+import os
 
-DATA_PATH_OG = './data/train.En__1_.csv'
-DATA_PATH_extended = './data/extended_dataset.txt'
-DATA_PATH_testset = './data/task_A_En_test__1_.csv'
+DATA_PATH_OG = os.path.join(ROOT_DIR,'./data/train.En__1_.csv')
+DATA_PATH_extended = os.path.join(ROOT_DIR,'./data/extended_dataset.txt')
+DATA_PATH_testset = os.path.join(ROOT_DIR,'./data/task_A_En_test__1_.csv')
 
 class TweetDataset:
     def __init__(self):

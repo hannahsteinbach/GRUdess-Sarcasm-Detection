@@ -1,17 +1,18 @@
 """
     This file is the main file of the project.
-    It is designed to lead through all the steps which were involved to get to the 
-    result of the project.1
+    It is designed to lead the user through all of the steps which were involved to acheive 
+    the results mentioned in the paper.
     
-    If run, the User can chose the dataset they want to
-    see results on and if they want to see it in
-        > Training with Cross Validation or
-        > Training and Teesting on the test data.
+    When run, the file enables the User to choose
+    which dataset they want to train the model on,
+    as well as whether they want to see the results of:
+        > Training with Cross Validation (on seen data) or
+        > Training and Testing (on unseen data).
 
-    Afterwards the data will be preprocessed.
-    And GRUdess will be executed.
+    After the user makes their decision, the data will be preprocessed
+    and our "GRUdess" (our Gated Recurrent Unit model) will be executed.
 
-    For more details please refer to the README document.
+    For more details, please refer to the README document.
 """
 
 #####################################
@@ -22,6 +23,7 @@ from preprocessing.extended_data import *
 from preprocessing.preprocessing import *
 from model.grudess import *
 from model.focal_loss import *
+import os
 
 #####################################
 #   functions
@@ -57,8 +59,12 @@ def run_script():
 
         To chose options in the following process
         type in the number in front of the option and hit enter.""")
-
+        
+        # set the path to the root directory
+        ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+        
         # ask user which data should be used
+
         dataset = int(input("Which data do you want to use? \nPlease choose one of the following: \n0 \tClose program. \n1 \tOG_dataset \n2 \tbalanced_dataset \n3\tunbalanced_dataset\n\n"))
         
         model = int(input("What do you want to see:\n0\tClose program.\n1\tTraining and Testing on Cross Validation \n2\tTraining and Testing in Test Data\n\n"))
