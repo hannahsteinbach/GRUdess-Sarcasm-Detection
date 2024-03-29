@@ -8,7 +8,7 @@ from torch.utils.data import  DataLoader, TensorDataset, Subset
 import torch.nn.utils.rnn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import f1_score
+from sklearn.metrics import f1_score, precision_score, recall_score
 import json
 
 random.seed(9)
@@ -443,7 +443,9 @@ def run_grudess_train_test(train_dataset,
     # Compute F1 score
     f1 = f1_score(labels.cpu().numpy(), predicted.cpu().numpy())
     all_results["f1_score"] = f1
-
+    f1_sarcastic = f1_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
+    all_results["f1_sarcastic"] = f1_sarcastic
+    
     acc = 100.0 * n_correct / n_samples
 
     all_results["acc_score"] = acc
