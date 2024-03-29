@@ -42,6 +42,7 @@ def run_script():
 
     while True:
         print("""
+        
         Hello, thank you for your interest in GRUdess, 
         a sarcasm identifier.
               
@@ -63,17 +64,33 @@ def run_script():
         model = int(input("What do you want to see:\n0\tClose program.\n1\tTraining and Testing on Cross Validation \n2\tTraining and Testing in Test Data\n\n"))
         
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        print(device)
+        print(f"Using {device}.")
 
-        num_layers = 2
-
-        hidden_size = 128
+        num_layers = 12
+        hidden_size = 256
         num_classes = 2
         num_epochs = 25
-        batch_size = 50
-        learning_rate = 0.001
+        batch_size = 128
+        learning_rate = 0.0001
         k = 3
         max_grad_norm = 5
+
+        # schedular parameters
+        scheduler_cooldown = 5
+        scheduler_min_lr = 2.000e-7
+        scheduler_factor = 0.5
+        scheduler_patience = 8
+
+        # early dropout parameters
+        patience = 10
+        min_delta = 0.005
+        dropout_rate = 0.5
+
+
+
+        
+    
+
 
         try: 
             if dataset == 0 or model == 0:
@@ -114,7 +131,14 @@ def run_script():
                                        num_epochs,
                                        batch_size,
                                        learning_rate,
-                                       max_grad_norm)
+                                       max_grad_norm,
+                                       scheduler_cooldown,
+                                       scheduler_min_lr,
+                                       scheduler_factor,
+                                       scheduler_patience, 
+                                       patience,
+                                       min_delta,
+                                       dropout_rate)
             
             # balanced_dataset and CV
             elif dataset == 2 and model == 1:
