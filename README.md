@@ -2,7 +2,7 @@
 
 Welcome! This project aims to detect sarcasm in text data gathered from Twitter by employing a bidirectional Gated Recurrent Unit (GRU) recurrent neural network. Our approach is unique in the sense that it combines both pre-trained word and emoji embeddings as well as carefully selected features that are meant to represent various linguistically-grounded components of sarcastic statements. 💗🧙🏼‍♀️
 
-## Our hand-crafted features classified
+## Our features
 
 | Classification                        | Feature                                                     | Corresponding Functions in preprocessing.py       |
 |---------------------------------------|-------------------------------------------------------------|---------------------------------|
