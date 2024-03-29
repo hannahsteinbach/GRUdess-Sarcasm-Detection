@@ -15,7 +15,7 @@ random.seed(9)
 
 class GRUdess(nn.Module):
     def __init__(self, input_size, hidden_size, num_layers, num_classes,
-                 dropout_rate=0.2):  # typical dropout values around 0.2-0.5; experimentation needed
+                 dropout_rate):  # typical dropout values around 0.2-0.5; experimentation needed
         super(GRUdess, self).__init__()
         self.num_layers = num_layers
         self.hidden_size = hidden_size
@@ -42,8 +42,8 @@ class GRUdess(nn.Module):
 
 class EarlyStopping:
 
-    def __init__(self, patience=5,
-                 min_delta=0):  # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
+    def __init__(self, patience,
+                 min_delta):  # for now, we can set these as defaults, but we will probably have to adjust it after we notice how our model trains
 
         self.patience = patience
         self.minDelta = min_delta
@@ -262,7 +262,14 @@ def run_grudess_train_test(train_dataset,
                            num_epochs,
                            batch_size,
                            learning_rate,
-                           max_grad_norm):
+                           max_grad_norm,
+                           scheduler_cooldown,
+                           scheduler_min_lr,
+                           scheduler_factor,
+                           scheduler_patience,
+                           patience,
+                           min_delta,
+                           dropout_rate):
     
     # dictionary to save eval. metrics in
     all_results = {
@@ -301,15 +308,17 @@ def run_grudess_train_test(train_dataset,
 
     weights = torch.FloatTensor(class_weights(class_tensor_train))
 
-    model = GRUdess(input_size, hidden_size, num_layers, num_classes).to(device)
+    model = GRUdess(input_size, hidden_size, num_layers, num_classes, dropout_rate).to(device)
 
     criterion = FocalLoss(alpha=weights, gamma=2)
     # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=3, cooldown=2, min_lr=1e-6)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', factor=scheduler_factor, 
+                                  patience=scheduler_patience, cooldown=scheduler_cooldown, 
+                                  min_lr=scheduler_min_lr)
 
-    earlyStop = EarlyStopping(patience=5, min_delta=0.001)
+    earlyStop = EarlyStopping(patience, min_delta)
 
     # create dataloader
     train_loader = DataLoader(train_dataset,
