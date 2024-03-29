@@ -2,8 +2,34 @@
 
 Welcome! This project aims to detect sarcasm in text data gathered from Twitter by employing a bidirectional Gated Recurrent Unit (GRU) recurrent neural network. Our approach is unique in the sense that it combines both pre-trained word and emoji embeddings as well as carefully selected features that are meant to represent various linguistically-grounded components of sarcastic statements. 💗🧙🏼‍♀️
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+## Our hand-crafted features
+## Features Classification
+
+| Classification                        | Feature                                                     |
+|---------------------------------------|-------------------------------------------------------------|
+| **I. Token-specific features**        |                                                             |
+| Lexical features                      | Unigrams                                                    |
+|                                       | Bigrams                                                     |
+| Syntactic features                    | POS-tags                                                    |
+| Embeddings                            | Word and Emoji Embeddings                                   |
+| Sentiment/emotion features            | Token sentiments                                            |
+| **II. Tweet-specific features**       |                                                             |
+| Sentiment/emotion features            | Polarity of a tweet                                         |
+|                                       | Frequency of words containing repeating letter sequences    |
+|                                       | Sentiment before consecutive punctuation                     |
+|                                       | Hyperboles                                                  |
+| Stylistic/Sentiment/emotion features | Frequency of words written in all-caps                      |
+|                                       | Frequency of capitalized letters                            |
+| Pragmatic features                    | Tweet length                                                |
+|                                       | Frequency of user mentions                                  |
+|                                       | Frequency of emojis                                         |
+|                                       | Frequency of emoticons                                      |
+| Punctuation features                  | Frequency of question marks                                 |
+|                                       | Frequency of exclamation marks                              |
+|                                       | Frequency of periods                                        |
+|                                       | Consecutive repeatings of punctuation                       |
+| Stylistic features                    | Words with first letter capitalized                        |
+
 
 ## Getting Started
 
