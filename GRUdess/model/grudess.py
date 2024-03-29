@@ -441,11 +441,27 @@ def run_grudess_train_test(train_dataset,
     all_results["recall"] = rec
 
     # Compute F1 score
+
+    # Imge's approach
     f1 = f1_score(labels.cpu().numpy(), predicted.cpu().numpy())
-    all_results["f1_score"] = f1
-    f1_sarcastic = f1_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
-    all_results["f1_sarcastic"] = f1_sarcastic
     
+    all_results["f1_score"] = f1
+
+    # option 1 as provided by Abu Farha et al. 2022
+    f1_sarcastic1 = f1_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
+    
+    all_results["f1_sarcastic2"] = f1_sarcastic1
+
+    # option 2 as provided by Abu Farha et al. 2022
+    p_score_sarcastic = precision_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
+    r_score_sarcastic = recall_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
+    f1_score_sarcastic2 = (2 * p_score_sarcastic * r_score_sarcastic) / (p_score_sarcastic + r_score_sarcastic)
+
+    all_results["p_score_sarcastic"] = p_score_sarcastic
+    all_results["r_score_sarcastic"] = r_score_sarcastic
+    all_results["f1_score_sarcastic2"] = f1_score_sarcastic2
+
+    # compute accuracy
     acc = 100.0 * n_correct / n_samples
 
     all_results["acc_score"] = acc
