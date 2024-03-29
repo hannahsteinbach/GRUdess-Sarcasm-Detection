@@ -29,33 +29,32 @@ Welcome! This project aims to detect sarcasm in text data gathered from Twitter 
 |                                       | Consecutive punctuation                       | `find_consecutive_punctuation()` |
 | Stylistic features                    | Words with first letter capitalized                        | `get_first_letter_capitalized_words()` |
 
-All tweet specific features are stored in a feature tensor by calling the function `create_feature_tensor()`. Additionally, there are distinc tensors each token-specific tensor (for unigrams, bigrams, POS-tags, embeddiings and token sentiments) as listed in the table. Note that the order of the execution of the functions is important since some features depend on others. It is recommended to keep the order given in our code files for any dataset "dataset":
+All tweet specific features are stored in a feature tensor by calling the function `create_feature_tensor()`. Additionally, there are distinct tensors for each token-specific tensor (for unigrams, bigrams, POS-tags, embeddiings and token sentiments) as listed in the table. Note that the order of the execution of the functions is important since some features depend on others. It is recommended to keep the order given in our code files for any dataset "dataset":
 
-data.tokenizer()
-dataset.tweet_length_tokenized()
-dataset.include_2vec()
-dataset.create_embedding_tensor()
-dataset.handling_emojis()
-dataset.handling_emoticons()
-dataset.pos_tagging()
-dataset.sentiment()
-dataset.caps_counts()
-dataset.same_letter_count()
-dataset.ats_count()
-dataset.exclamation_mark_count()
-dataset.question_mark_count()
-dataset.period_count()
-dataset.find_consecutive_punctuation()
-dataset.create_valence_tensor()
-dataset.valence_before_repeating_punctuation()
-dataset.detect_hyperbole()
+- `data.tokenizer()`
+- `dataset.tweet_length_tokenized()`
+- `dataset.include_2vec()`
+- `dataset.create_embedding_tensor()`
+- `dataset.handling_emojis()`
+- `dataset.handling_emoticons()`
+- `dataset.pos_tagging()`
+- `dataset.sentiment()`
+- `dataset.caps_counts()`
+- `dataset.same_letter_count()`
+- `dataset.ats_count()`
+- `dataset.exclamation_mark_count()`
+- `dataset.question_mark_count()`
+- `dataset.period_count()`
+- `dataset.find_consecutive_punctuation()`
+- `dataset.create_valence_tensor()`
+- `dataset.valence_before_repeating_punctuation()`
+- `dataset.detect_hyperbole()`
+- `dataset.create_vocabulary()`
+- `dataset.create_bigrams()`
+- `dataset.create_uni_bigram_tensor()`
+- `dataset.create_feature_tensor()`
+- `dataset.create_classification_tensor()`
 
-dataset.create_vocabulary()
-dataset.create_bigrams()
-
-dataset.create_uni_bigram_tensor()
-dataset.create_feature_tensor()
-dataset.create_classification_tensor()
 
 
 
