@@ -15,6 +15,7 @@ import gensim.downloader as api
 import numpy as np
 from preprocessing.extended_data import emoticons_dic, pos_tag_dict
 import pandas as pd
+import os 
 
 
 class Preprocessing:
@@ -539,7 +540,7 @@ class Preprocessing:
         # try to load the saved model
         try:
             print("Loading Saved Word Embeddings...")
-            wv_model = KeyedVectors.load("./data/word2vec.model")
+            wv_model = KeyedVectors.load("./GRUdess/data/word2vec.model")
             print("Saved Word Embeddings Loaded Successfully...")
 
         # if model not saved, install it 
@@ -549,18 +550,22 @@ class Preprocessing:
             wv_model = api.load("word2vec-google-news-300")
             print("Loaded Pre-Trained Word Embeddings...")
 
-            # model can't be saved if user as too less space on device
-            # include scape to avoid error
-            try:
-                print("Saving Word2Vec Model...")
-                wv_model.save("./data/word2vec.model")
-                print("Word2Vec Model Saved Successfully...")
-            except:
-                print("No space on device to save model.")
+            current_directory = os.getcwd()
+            print(current_directory)
+
+            save_dir = "./GRUdess/data/"
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+
+            # Save Word2Vec model
+            print("Saving Word2Vec Model...")
+            wv_model.save(os.path.join(save_dir, "word2vec.model"))
+            print("Word2Vec Model saved successfully.")
+            print("Word2Vec Model Saved Successfully...")
 
 
         # load emoji2vec model (emoji2vec.bin)
-        def emoji_embeddings(path="./data/emoji2vec.txt"):
+        def emoji_embeddings(path="./GRUdess/data/emoji2vec.txt"):
             with open(path, "r", encoding="UTF-8") as f:
                 file = f.readlines()
 
@@ -1001,6 +1006,9 @@ def generate_train_test_tensor(chosen_train_dataset, testset):
                                     valence_tensor_train, embedding_tensor_train), dim=1)
     
     print("Pre-Processing Tensors for Test data...")
+
+    
+
     test_data = Preprocessing(testset)
     test_data.tokenizer()
     test_data.tweet_length_tokenized()
@@ -1020,8 +1028,8 @@ def generate_train_test_tensor(chosen_train_dataset, testset):
     test_data.create_valence_tensor()
     test_data.valence_before_repeating_punctuation()
     test_data.detect_hyperbole()
-    test_data.create_vocabulary()
-    test_data.create_bigrams()
+    test_data.vocabulary = train_data.vocabulary
+    test_data.bigrams = train_data.bigrams
 
     test_data.create_uni_bigram_tensor()
     test_data.create_feature_tensor()
