@@ -24,6 +24,15 @@ Make sure to first meet all of the requirements for installed dependencies first
 
 # 2. Train and evaluate model
 
+To train the model and see results in general please follow the following steps:
+1. Download the folder GRUdess and save it somewhere on your device.
+2. Install all necessary libraries as they are listed in "1. Install dependencies".
+3. Run main.py (in your terminal). It starts the program and will lead you through the following possible options.
+- After running main.py you will be asked to chose one of the following datasets **OG_dataset**, **Balanced_dataset** or **Inbalanced_dataset**. Select the one you want by inserting the number in front of it and hit "enter".
+- Afterwards you will be asked if you (1) want to train GRUdess with Cross Validation or if you (2) want to train GRUdess on the whole chosen train data and test it on the test data.
+- After selecting your preferences, GRUdess will start and you can watch the show :)
+
+
 ## Usage
 Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
 
