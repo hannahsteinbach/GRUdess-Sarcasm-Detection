@@ -86,12 +86,6 @@ def run_script():
         min_delta = 0.005
         dropout_rate = 0.5
 
-
-
-        
-    
-
-
         try: 
             if dataset == 0 or model == 0:
                 print("Bye, bye! :)")
@@ -120,6 +114,7 @@ def run_script():
                 combined_tensor_train, class_tensor_train, combined_tensor_test, class_tensor_test = generate_train_test_tensor(OG_dataset, testset)
                 train_dataset = combined_tensor_train
                 test_dataset = combined_tensor_test
+                
                 # run GRUdess
                 run_grudess_train_test(train_dataset,
                                        class_tensor_train,
@@ -145,6 +140,7 @@ def run_script():
                 # preprocess the dataset
                 combined_tensor_train, class_tensor_train = generate_train_tensor(balanced_dataset)
                 train_dataset = combined_tensor_train
+                
                 # run GRUdess
                 run_grudess_CV(train_dataset,
                                class_tensor_train,
@@ -163,6 +159,7 @@ def run_script():
                 combined_tensor_train, class_tensor_train, combined_tensor_test, class_tensor_test = generate_train_test_tensor(balanced_dataset, testset)
                 train_dataset = combined_tensor_train
                 test_dataset = combined_tensor_test
+                
                 # run GRUdess
                 run_grudess_train_test(train_dataset,
                                        class_tensor_train,
@@ -181,6 +178,7 @@ def run_script():
                 # preprocess the dataset
                 combined_tensor_train, class_tensor_train = generate_train_tensor(unbalanced_dataset)
                 train_dataset = combined_tensor_train
+                
                 # run GRUdess
                 run_grudess_CV(train_dataset,
                                class_tensor_train,
@@ -199,6 +197,7 @@ def run_script():
                 combined_tensor_train, class_tensor_train, combined_tensor_test, class_tensor_test = generate_train_test_tensor(OG_dataset, testset)
                 train_dataset = combined_tensor_train
                 test_dataset = combined_tensor_test
+                
                 # run GRUdess
                 run_grudess_train_test(train_dataset,
                                        class_tensor_train,
