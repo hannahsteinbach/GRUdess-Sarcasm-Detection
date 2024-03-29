@@ -754,9 +754,9 @@ class Preprocessing:
         for tweet in self.dataset:
             tweetText = tweet["tweetText"]
             atsCount = len(re.findall(r'@\w+', tweetText))
-            totalChars = len(tweet["tweetText"])
-            if totalChars > 0:
-                normalized = atsCount / totalChars
+            totalToken= tweet["tweetTokenizedLength"]
+            if totalToken > 0:
+                normalized = atsCount / totalToken
             else:
                 normalized = 0
             tweet["taggedCount"] = normalized
