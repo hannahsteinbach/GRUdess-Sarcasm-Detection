@@ -8,7 +8,7 @@ from torch.utils.data import  DataLoader, TensorDataset, Subset
 import torch.nn.utils.rnn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from sklearn.model_selection import StratifiedKFold
-from sklearn.metrics import f1_score, precision_score, recall_score
+from sklearn.metrics import f1_score
 import json
 
 random.seed(9)
@@ -279,6 +279,7 @@ def run_grudess_train_test(train_dataset,
         "train_sarcasm": 0,
         "test_sarcasm": 0,
         "losses": list(),
+        "average_losses": list(),
         "tp": 0,
         "fp": 0,
         "fn": 0,
@@ -350,7 +351,7 @@ def run_grudess_train_test(train_dataset,
             outputs = model(tweets)
             loss = criterion(outputs, labels)
             loss_e += loss.item()
-            all_results["losses"].append(int(loss))
+            all_results["losses"].append(loss_e)
 
             # gradient clipping:
             if max_grad_norm is not None:
@@ -368,17 +369,18 @@ def run_grudess_train_test(train_dataset,
         average_epoch_loss = loss_e / len(train_loader)
         scheduler.step(average_epoch_loss) # i (hannah) filled this, is that correct?
         print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {average_epoch_loss}")
+        all_results["average_losses"].append(average_epoch_loss)
 
         # if the model performance stops improving before iterating through all epochs,
         # stop training early
         earlyStop(all_results["losses"][-1])  # check if the last loss value is the best, need to access
                                                         #  correct entry fri
         if earlyStop.stopped:
-            print("Early stopping!")
+            # print("Early stopping!")
             break #indented so it only stops when it should
 
     # Save the trained model
-    torch.save(model.state_dict(), './GRUdess/results/GRUdess_model.pth')
+    torch.save(model.state_dict(), './results/GRUdess_model.pth')
     print("Model saved successfully.")
 
     print("Starting testing...")
@@ -441,33 +443,15 @@ def run_grudess_train_test(train_dataset,
     all_results["recall"] = rec
 
     # Compute F1 score
+    f1_sarcastic = f1_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
+    all_results["f1_score"] = f1_sarcastic
 
-    # Imge's approach
-    f1 = f1_score(labels.cpu().numpy(), predicted.cpu().numpy())
-    
-    all_results["f1_score"] = f1
-
-    # option 1 as provided by Abu Farha et al. 2022
-    f1_sarcastic1 = f1_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
-    
-    all_results["f1_sarcastic2"] = f1_sarcastic1
-
-    # option 2 as provided by Abu Farha et al. 2022
-    p_score_sarcastic = precision_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
-    r_score_sarcastic = recall_score(labels.cpu().numpy(),predicted.cpu().numpy(), average = "binary", pos_label = 1)
-    f1_score_sarcastic2 = (2 * p_score_sarcastic * r_score_sarcastic) / (p_score_sarcastic + r_score_sarcastic)
-
-    all_results["p_score_sarcastic"] = p_score_sarcastic
-    all_results["r_score_sarcastic"] = r_score_sarcastic
-    all_results["f1_score_sarcastic2"] = f1_score_sarcastic2
-
-    # compute accuracy
     acc = 100.0 * n_correct / n_samples
 
     all_results["acc_score"] = acc
 
     # create file to save results of model on test data
-    path = "./GRUdess/results/results_of_GRUdess_traintest.json"
+    path = "./results/results_of_GRUdess_traintest.json"
 
     print(f"Saving Results in {path}...")
     with open(path, "w", encoding="UTF-8") as file_results:
