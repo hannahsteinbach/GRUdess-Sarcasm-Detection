@@ -6,15 +6,15 @@ from someweta import ASPTagger
 from nltk.sentiment.vader import SentimentIntensityAnalyzer
 import re
 import emoji
-import torch
-import html
-import gensim
-from gensim.models import word2vec
-from gensim.models.word2vec import Word2Vec
+# import html
+# import gensim
+from gensim.models import KeyedVectors
+# from gensim.models.word2vec import Word2Vec
 import gensim.downloader as api
 import numpy as np
-from extended_data import emoticons_dic, pos_tag_dict, OG_dataset, balanced_dataset, unbalanced_dataset, testset
+from preprocessing.extended_data import emoticons_dic, pos_tag_dict
 import pandas as pd
+import os 
 
 
 class Preprocessing:
@@ -261,7 +261,6 @@ class Preprocessing:
 
         self.bigrams = bigram_dict
 
-
     def pos_tagging(self):
         """
         Function that attaches POS tags to the tokenized text in the dataset.
@@ -278,7 +277,7 @@ class Preprocessing:
         pos_array = np.zeros((num_rows, num_cols), dtype=int)
 
         # Load model
-        model = "./data/used_models/english_newspaper_2017-09-15.model"
+        model = "./data/english_newspaper_2017-09-15.model"
 
         # Create object for pos tagger
         print("Loading PoS tagger...")
@@ -325,7 +324,6 @@ class Preprocessing:
                 pos_array[i, j + distance] = pos_tag_dict[tag]
 
         self.pos_tensor = torch.tensor(pos_array)
-
 
     def sentiment(self):
         """
@@ -536,16 +534,35 @@ class Preprocessing:
 
             
         """
-        # load pre-trained model
-        # wv = api.load("glove-twitter-100")
-        print("Loading Pre-Trained Word Embeddings...")
-        wv_model = api.load("word2vec-google-news-300")
-        print("Loaded Pre-Trained Word Embeddings...")
+        # try to load the saved model
+        try:
+            print("Loading Saved Word Embeddings...")
+            wv_model = KeyedVectors.load("./data/word2vec.model")
+            print("Saved Word Embeddings Loaded Successfully...")
 
-        # save the vectors
-        # wv_model.save("./used_models/word2vec.model")
-        # wv_model = "./data/vectors.kv"
-        # wv_model = Word2Vec.load("./used_models/word2vec.model")
+        # if model not saved, install it 
+        except:
+
+            print("Loading Pre-Trained Word Embeddings...")
+            wv_model = api.load("word2vec-google-news-300")
+            print("Loaded Pre-Trained Word Embeddings...")
+
+            current_directory = os.getcwd()
+            print(current_directory)
+
+            save_dir = "./data/"
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+
+            try:
+                # Save Word2Vec model
+                print("Saving Word2Vec Model...")
+                wv_model.save(os.path.join(save_dir, "word2vec.model"))
+                print("Word2Vec Model saved successfully.")
+
+            except:
+                print("No space on your device to save the model for word embeddings.")
+
 
         # load emoji2vec model (emoji2vec.bin)
         def emoji_embeddings(path="./data/emoji2vec.txt"):
@@ -621,8 +638,8 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-        self.embedding_tensor = torch.tensor(embedding_array)
-        
+        self.embedding_tensor = torch.tensor(embedding_array, dtype=torch.float32)
+
     def question_mark_count(self):
         """
         Function to add a feature representing the number of question marks in each tweet.
@@ -721,7 +738,6 @@ class Preprocessing:
 
         progressBar.close()
 
-
     def ats_count(self):
         """
         Function to add a feature representing the number of user mentions in each tweet.
@@ -747,7 +763,6 @@ class Preprocessing:
             progressBar.update(1)
 
         progressBar.close()
-
 
     def create_valence_tensor(self):  # note: this is not used as a feature, but simply a helper function
         """
@@ -908,66 +923,129 @@ class Preprocessing:
         self.class_tensor = torch.tensor(class_pd.values)
 
 
-train_data = Preprocessing(OG_dataset)
-train_data.tokenizer()
-train_data.tweet_length_tokenized()
-train_data.include_2vec()
-train_data.create_embedding_tensor()
-train_data.handling_emojis()
-train_data.handling_emoticons()
-train_data.pos_tagging()
-train_data.sentiment()
-train_data.caps_counts()
-train_data.same_letter_count()
-train_data.ats_count()
-train_data.exclamation_mark_count()
-train_data.question_mark_count()
-train_data.period_count()
-train_data.find_consecutive_punctuation()
-train_data.create_valence_tensor()
-train_data.valence_before_repeating_punctuation()
-train_data.detect_hyperbole()
+def generate_train_tensor(chosen_train_dataset):
+    print("Pre-Processing Tensors for Train data...")
+    train_data = Preprocessing(chosen_train_dataset)
+    train_data.tokenizer()
+    train_data.tweet_length_tokenized()
+    train_data.include_2vec()
+    train_data.create_embedding_tensor()
+    train_data.handling_emojis()
+    train_data.handling_emoticons()
+    train_data.pos_tagging()
+    train_data.sentiment()
+    train_data.caps_counts()
+    train_data.same_letter_count()
+    train_data.ats_count()
+    train_data.exclamation_mark_count()
+    train_data.question_mark_count()
+    train_data.period_count()
+    train_data.find_consecutive_punctuation()
+    train_data.create_valence_tensor()
+    train_data.valence_before_repeating_punctuation()
+    train_data.detect_hyperbole()
+    train_data.create_vocabulary()
+    train_data.create_bigrams()
 
-train_data.create_vocabulary()
-train_data.create_bigrams()
+    train_data.create_uni_bigram_tensor()
+    train_data.create_feature_tensor()
+    train_data.create_classification_tensor()
 
-train_data.create_uni_bigram_tensor()
-train_data.create_feature_tensor()
-train_data.create_classification_tensor()
-
-
-'''test_data = Preprocessing(testset)
-test_data.tokenizer()
-test_data.tweet_length_tokenized()
-test_data.handling_emojis()
-test_data.handling_emoticons()
-#test_data.pos_tagging()
-train_data.sentiment()
-test_data.vocabulary = train_data.vocabulary
-test_data.bigrams = train_data.bigrams
-test_data.create_uni_bigram_array()
-print(test_data.unigram_array)
-print(test_data.bigram_array)
-'''
-#print(test_data.dataset)
-'''
-'''
+    class_tensor_train = train_data.class_tensor
+    feature_tensor_train = train_data.feature_tensor
+    pos_tensor_train = train_data.pos_tensor
+    unigram_tensor_train = train_data.unigram_tensor
+    bigram_tensor_train = train_data.bigram_tensor
+    valence_tensor_train = train_data.valence_tensor
+    embedding_tensor_train = train_data.embedding_tensor
 
 
-class_tensor_train = train_data.class_tensor
-feature_tensor_train = train_data.feature_tensor
-pos_tensor_train = train_data.pos_tensor
-unigram_tensor_train = train_data.unigram_tensor
-bigram_tensor_train = train_data.bigram_tensor
-valence_tensor_train = train_data.valence_tensor
-embedding_tensor_train = train_data.embedding_tensor
+    combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train,
+                                    valence_tensor_train, embedding_tensor_train), dim=1)
+    
+    return combined_tensor_train, class_tensor_train
+
+def generate_train_test_tensor(chosen_train_dataset, testset):
+    print("Pre-Processing Tensors for Train data...")
+    train_data = Preprocessing(chosen_train_dataset)
+    train_data.tokenizer()
+    train_data.tweet_length_tokenized()
+    train_data.include_2vec()
+    train_data.create_embedding_tensor()
+    train_data.handling_emojis()
+    train_data.handling_emoticons()
+    train_data.pos_tagging()
+    train_data.sentiment()
+    train_data.caps_counts()
+    train_data.same_letter_count()
+    train_data.ats_count()
+    train_data.exclamation_mark_count()
+    train_data.question_mark_count()
+    train_data.period_count()
+    train_data.find_consecutive_punctuation()
+    train_data.create_valence_tensor()
+    train_data.valence_before_repeating_punctuation()
+    train_data.detect_hyperbole()
+    train_data.create_vocabulary()
+    train_data.create_bigrams()
+
+    train_data.create_uni_bigram_tensor()
+    train_data.create_feature_tensor()
+    train_data.create_classification_tensor()
+
+    class_tensor_train = train_data.class_tensor
+    feature_tensor_train = train_data.feature_tensor
+    pos_tensor_train = train_data.pos_tensor
+    unigram_tensor_train = train_data.unigram_tensor
+    bigram_tensor_train = train_data.bigram_tensor
+    valence_tensor_train = train_data.valence_tensor
+    embedding_tensor_train = train_data.embedding_tensor
 
 
-combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train,
-                                   valence_tensor_train, ), dim=1)
+    combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train,
+                                    valence_tensor_train, embedding_tensor_train), dim=1)
+    
+    print("Pre-Processing Tensors for Test data...")
 
-#combined_tensor_train = torch.cat((feature_tensor_train, pos_tensor_train, unigram_tensor_train, bigram_tensor_train), dim=1)
+    
 
-print(combined_tensor_train)
-print(combined_tensor_train.shape)
+    test_data = Preprocessing(testset)
+    test_data.tokenizer()
+    test_data.tweet_length_tokenized()
+    test_data.include_2vec()
+    test_data.create_embedding_tensor()
+    test_data.handling_emojis()
+    test_data.handling_emoticons()
+    test_data.pos_tagging()
+    test_data.sentiment()
+    test_data.caps_counts()
+    test_data.same_letter_count()
+    test_data.ats_count()
+    test_data.exclamation_mark_count()
+    test_data.question_mark_count()
+    test_data.period_count()
+    test_data.find_consecutive_punctuation()
+    test_data.create_valence_tensor()
+    test_data.valence_before_repeating_punctuation()
+    test_data.detect_hyperbole()
+    test_data.vocabulary = train_data.vocabulary
+    test_data.bigrams = train_data.bigrams
+
+    test_data.create_uni_bigram_tensor()
+    test_data.create_feature_tensor()
+    test_data.create_classification_tensor()
+
+    class_tensor_test = test_data.class_tensor
+    feature_tensor_test = test_data.feature_tensor
+    pos_tensor_test = test_data.pos_tensor
+    unigram_tensor_test = test_data.unigram_tensor
+    bigram_tensor_test = test_data.bigram_tensor
+    valence_tensor_test = test_data.valence_tensor
+    embedding_tensor_test = test_data.embedding_tensor
+
+    combined_tensor_test = torch.cat((feature_tensor_test, pos_tensor_test, unigram_tensor_test, bigram_tensor_test,
+                                    valence_tensor_test, embedding_tensor_test), dim=1)
+
+
+    return combined_tensor_train, class_tensor_train, combined_tensor_test, class_tensor_test
 
