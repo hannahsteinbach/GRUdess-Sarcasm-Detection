@@ -540,7 +540,7 @@ class Preprocessing:
         # try to load the saved model
         try:
             print("Loading Saved Word Embeddings...")
-            wv_model = KeyedVectors.load("./GRUdess/data/word2vec.model")
+            wv_model = KeyedVectors.load("./data/word2vec.model")
             print("Saved Word Embeddings Loaded Successfully...")
 
         # if model not saved, install it 
@@ -553,7 +553,7 @@ class Preprocessing:
             current_directory = os.getcwd()
             print(current_directory)
 
-            save_dir = "./GRUdess/data/"
+            save_dir = "./data/"
             if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
 
@@ -565,7 +565,7 @@ class Preprocessing:
 
 
         # load emoji2vec model (emoji2vec.bin)
-        def emoji_embeddings(path="./GRUdess/data/emoji2vec.txt"):
+        def emoji_embeddings(path="./data/emoji2vec.txt"):
             with open(path, "r", encoding="UTF-8") as f:
                 file = f.readlines()
 
