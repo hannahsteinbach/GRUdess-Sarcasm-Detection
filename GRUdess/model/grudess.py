@@ -3,7 +3,7 @@ import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from model.focal_loss import class_weights, FocalLoss
+from .focal_loss import class_weights, FocalLoss
 from torch.utils.data import  DataLoader, TensorDataset, Subset
 import torch.nn.utils.rnn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
