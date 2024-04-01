@@ -75,7 +75,10 @@ def run_grudess_CV(combined_tensor_train,
                    num_epochs,
                    batch_size,
                    learning_rate,
-                   k, max_grad_norm):
+                   k, 
+                   max_grad_norm,
+                   dropout_rate):
+    
     all_precision_scores = list()
     all_recall_scores = list()
     all_f1_scores = []
@@ -100,8 +103,8 @@ def run_grudess_CV(combined_tensor_train,
 
     weights = torch.FloatTensor(class_weights(class_tensor_train))
 
-    model = GRUdess(input_size, hidden_size, num_layers, num_classes).to(device)
-
+    model = GRUdess(input_size, hidden_size, num_layers, num_classes, dropout_rate).to(device)
+                 
     criterion = FocalLoss(alpha=weights, gamma=2)
     # criterion = nn.CrossEntropyLoss()  -> choose with loss function to use
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
