@@ -20,8 +20,8 @@
 
 from extended_data import *
 from preprocessing import *
-from model.grudess import *
-from model.focal_loss import *
+from grudess import *
+from focal_loss import *
 
 
 #####################################
