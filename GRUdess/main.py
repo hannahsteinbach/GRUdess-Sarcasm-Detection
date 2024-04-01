@@ -18,8 +18,8 @@
 #   modules
 #####################################
 
-from preprocessing.extended_data import *
-from preprocessing.preprocessing import *
+from extended_data import *
+from preprocessing import *
 from model.grudess import *
 from model.focal_loss import *
 
