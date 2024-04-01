@@ -216,8 +216,8 @@ def run_script():
             # preprocess the dataset
             """
             Disclaimer: We realised too late that this function does take the OG dataset
-            as well. Our papers are based on these results. Correctly would have been
-            unbalanced_dataset.
+            as well. We change this now, but our papers are based on these incorrectresults (where imbalanced 
+            dataset actually is OG dataset). 
             """
             combined_tensor_train, class_tensor_train, combined_tensor_test, class_tensor_test = generate_train_test_tensor(
                 unbalanced_dataset, testset)
