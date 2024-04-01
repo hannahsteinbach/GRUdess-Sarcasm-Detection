@@ -203,8 +203,14 @@ def run_script():
                                dropout_rate) 
 
             # unbalanced_dataset and train/test GRU
+
             elif dataset == 3 and model == 2:
                 # preprocess the dataset
+                """
+                Disclaimer: We realised too late that this function does take the OG dataset
+                as well. Our papers are based on these results. Correctly would have been
+                unbalanced_dataset.
+                """
                 combined_tensor_train, class_tensor_train, combined_tensor_test, class_tensor_test = generate_train_test_tensor(OG_dataset, testset)
                 train_dataset = combined_tensor_train
                 test_dataset = combined_tensor_test
