@@ -118,7 +118,8 @@ typing_extensions==4.10.0
 tzdata==2024.1
 wrapt==1.16.0
 
-## Or install all libraries with the provided requireents.txt file within GRUdess.
+
+Or install all libraries with the provided requireents.txt file within GRUdess.
 
 
 ## Usage (Train and Test GRUdess)
